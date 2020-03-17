@@ -1,7 +1,8 @@
 package models
 
 type Config struct {
-	Colly struct {
+	Version string `json:"version" mapstructure:"version"`
+	Colly   struct {
 		Delay int `json:"delay"`
 		Limit int `json:"limit"`
 	} `mapstructure:"colly" json:"colly"`
@@ -11,5 +12,6 @@ type Config struct {
 		Token     string `json:"token"`
 	} `mapstructure:"discord_notifications" json:"discord_notifications"`
 	Port    uint     `json:"port"`
+	Lang    string   `json:"lang" mapstructure:"lang"`
 	Proxies []string `json:"proxies,omitempty" mapstructure:"proxies"`
 }

@@ -5,7 +5,7 @@ const (
 	ErrObservationNameMustBeUnique = "observation.errNameMustBeUnique"
 	ErrObservationURLMustBeUnique  = "observation.errURLMustBeUnique"
 	ErrCannotFetchObservations     = "observation.errCannotFetch"
-	ErrObservationNotFound         = "observation.errObservationNotFound"
+	ErrObservationNotFound         = "observation.errNotFound"
 	ErrCannotUpdateObservation     = "observation.errCannotUpdate"
 	ErrCannotDeleteObservations    = "observation.errCannotDelete"
 	ErrInvalidObservationName      = "observation.errInvalidName"

@@ -111,8 +111,10 @@ func (repo *repository) appendFilter(f *models.ObservationFilter) *gorm.DB {
 		if len(f.URL) > 0 {
 			query = query.Where("url IN (?)", f.URL)
 		}
-		if f.Started != "" {
-			query = query.Where("started = ?", f.Started)
+		if f.Started == "true" {
+			query = query.Where("started = true")
+		} else if f.Started == "false" {
+			query = query.Where("started = false")
 		}
 		if f.Order != "" {
 			query = query.Order(f.Order)

@@ -61,19 +61,18 @@ func (m *manager) Close() error {
 }
 
 func (m *manager) handleConfigChange(fsnotify.Event) {
-	var err error
 	cfg, err := m.configManager.Config()
 	if err != nil {
 		m.Close()
 		return
 	}
 	if m.discord == nil && cfg.DiscordNotifications.Enabled && cfg.DiscordNotifications.Token != "" {
-		m.discord, err = discordgo.New("Bot " + cfg.DiscordNotifications.Token)
+		m.discord, _ = discordgo.New("Bot " + cfg.DiscordNotifications.Token)
 	} else if m.discord != nil && (!cfg.DiscordNotifications.Enabled || cfg.DiscordNotifications.Token == "") {
 		m.discord.Close()
 		m.discord = nil
 	} else if m.discord != nil && m.discord.Token != "Bot "+cfg.DiscordNotifications.Token {
 		m.discord.Close()
-		m.discord, err = discordgo.New("Bot " + cfg.DiscordNotifications.Token)
+		m.discord, _ = discordgo.New("Bot " + cfg.DiscordNotifications.Token)
 	}
 }

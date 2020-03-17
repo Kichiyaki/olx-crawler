@@ -11,8 +11,13 @@ import (
 	_observationHTTPDelivery "olx-crawler/observation/delivery/http"
 	_observationRepository "olx-crawler/observation/repository"
 	_observationUsecase "olx-crawler/observation/usecase"
+	_suggestionHTTPDelivery "olx-crawler/suggestion/delivery/http"
+	_suggestionRepository "olx-crawler/suggestion/repository"
+	_suggestionUsecase "olx-crawler/suggestion/usecase"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -33,6 +38,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//Notifications
 	notificationsManager, err := notifications.NewNotificationsManager(configManager)
 	if err != nil {
 		log.Fatal(err)
@@ -64,24 +70,34 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	suggestionRepo, err := _suggestionRepository.NewSuggestionRepository(db)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	//USECASES
 	observationUcase := _observationUsecase.NewObservationUsecase(observationRepo)
+	suggestionUcase := _suggestionUsecase.NewSuggestionUsecase(suggestionRepo)
 
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 	e.Use(middleware.Recover())
 	e.Use(middleware.Logger())
+	e.Static("/", "/public")
 	g := e.Group("/api")
 	_observationHTTPDelivery.NewObservationHandler(g, observationUcase)
+	_suggestionHTTPDelivery.NewSuggestionHandler(g, suggestionUcase)
 	_configHTTPDelivery.NewConfigHandler(g, configManager)
 
-	port := fmt.Sprintf(":%d", configManager.GetInt("port"))
+	url := fmt.Sprintf(":%d", configManager.GetInt("port"))
 	go func() {
-		e.Start(port)
+		e.Start(url)
 	}()
-	log.Printf("Server is listening on port %s", port)
+	log.Printf("Server is listening on port %d", configManager.GetInt("port"))
+	if err := openbrowser(fmt.Sprintf("http://localhost%s", url)); err != nil {
+		log.Fatal(err)
+	}
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
@@ -91,4 +107,20 @@ func main() {
 	defer cancel()
 	e.Shutdown(ctx)
 	log.Print("shutting down")
+}
+
+func openbrowser(url string) error {
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("cmd", "/C", "start", url).Run()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	return err
 }
