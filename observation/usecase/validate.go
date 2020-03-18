@@ -7,10 +7,10 @@ import (
 )
 
 type config struct {
-	Name    bool
-	URL     bool
-	Exclude bool
-	OneOf   bool
+	Name     bool
+	URL      bool
+	Excluded bool
+	OneOf    bool
 }
 
 func newConfig() config {
@@ -26,12 +26,12 @@ func (cfg config) validate(o models.Observation) error {
 		return errors.Wrap(errors.ErrInvalidObservationURL, []error{})
 	}
 
-	if cfg.Exclude {
-		for _, excl := range o.Exclude {
+	if cfg.Excluded {
+		for _, excl := range o.Excluded {
 			if excl.For != "title" && excl.For != "description" {
-				return errors.Wrap(errors.ErrInvalidExcludeFor, []error{})
+				return errors.Wrap(errors.ErrInvalidExcludedFor, []error{})
 			} else if excl.Value == "" {
-				return errors.Wrap(errors.ErrInvalidExcludeValue, []error{})
+				return errors.Wrap(errors.ErrInvalidExcludedValue, []error{})
 			}
 		}
 	}

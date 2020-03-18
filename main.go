@@ -6,6 +6,7 @@ import (
 	"log"
 	"olx-crawler/config"
 	_configHTTPDelivery "olx-crawler/config/delivery/http"
+	_cron "olx-crawler/cron"
 	"olx-crawler/i18n"
 	"olx-crawler/notifications"
 	_observationHTTPDelivery "olx-crawler/observation/delivery/http"
@@ -20,6 +21,8 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/labstack/echo/v4"
 
@@ -39,11 +42,13 @@ func main() {
 	}
 
 	//Notifications
-	notificationsManager, err := notifications.NewNotificationsManager(configManager)
+	notificationsManager, err := notifications.NewManager(configManager)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer notificationsManager.Close()
+	defer func() {
+		notificationsManager.Close()
+	}()
 
 	//I18N
 	i18n.LoadMessageFiles("i18n/locales")
@@ -64,6 +69,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.Exec("PRAGMA foreign_keys = ON;")
 
 	//REPOSITORIES
 	observationRepo, err := _observationRepository.NewObservationRepository(db)
@@ -75,9 +81,63 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// s := true
+	// observationRepo.Store(&models.Observation{
+	// 	Name: "Dysk SSD",
+	// 	URL:  "https://www.olx.pl/elektronika/q-Dysk-SSD/?search%5Bfilter_float_price%3Afrom%5D=100&search%5Bfilter_float_price%3Ato%5D=500",
+	// 	OneOf: []models.OneOf{
+	// 		models.OneOf{
+	// 			For:   "title",
+	// 			Value: "128 GB",
+	// 		},
+	// 		models.OneOf{
+	// 			For:   "title",
+	// 			Value: "128 gb",
+	// 		},
+	// 		models.OneOf{
+	// 			For:   "title",
+	// 			Value: "128GB",
+	// 		},
+	// 		models.OneOf{
+	// 			For:   "title",
+	// 			Value: "128gb",
+	// 		},
+	// 		models.OneOf{
+	// 			For:   "description",
+	// 			Value: "m2",
+	// 		},
+	// 	},
+	// 	Excluded: []models.Excluded{
+	// 		models.Excluded{
+	// 			For:   "title",
+	// 			Value: "komputer",
+	// 		},
+	// 		models.Excluded{
+	// 			For:   "title",
+	// 			Value: "laptop",
+	// 		},
+	// 	},
+	// 	Started: &s,
+	// })
+
 	//USECASES
 	observationUcase := _observationUsecase.NewObservationUsecase(observationRepo)
 	suggestionUcase := _suggestionUsecase.NewSuggestionUsecase(suggestionRepo)
+
+	//CRON
+	c := cron.New(cron.WithChain(
+		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags)))))
+	err = _cron.AttachHandlers(c, &_cron.Config{
+		NotificationsManager: notificationsManager,
+		ObservationRepo:      observationRepo,
+		SuggestionRepo:       suggestionRepo,
+		ConfigManager:        configManager,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.Start()
+	defer c.Stop()
 
 	e := echo.New()
 	e.HideBanner = true

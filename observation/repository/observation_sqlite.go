@@ -18,7 +18,7 @@ func NewObservationRepository(db *gorm.DB) (observation.Repository, error) {
 	for _, model := range []interface{}{
 		&models.Observation{},
 		&models.OneOf{},
-		&models.Exclude{},
+		&models.Excluded{},
 		&models.Checked{},
 	} {
 		if !db.HasTable(model) {
@@ -66,7 +66,8 @@ func (repo *repository) Update(input *models.Observation) error {
 }
 
 func (repo *repository) Delete(f *models.ObservationFilter) error {
-	errs := repo.appendFilter(f).Delete(&[]models.Observation{}).GetErrors()
+	o := []models.Observation{}
+	errs := repo.appendFilter(f).Unscoped().Delete(&o).GetErrors()
 	if len(errs) > 0 {
 		return errors.Wrap(errors.ErrCannotDeleteObservations, errs)
 	}

@@ -43,8 +43,8 @@ func (ucase *usecase) Update(o *models.Observation) (*models.Observation, error)
 	if o.URL == "" {
 		cfg.URL = false
 	}
-	if len(o.Exclude) == 0 {
-		cfg.Exclude = false
+	if len(o.Excluded) == 0 {
+		cfg.Excluded = false
 	}
 	if len(o.OneOf) == 0 {
 		cfg.OneOf = false

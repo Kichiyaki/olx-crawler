@@ -22,20 +22,20 @@ type handler struct {
 }
 
 type ObservationInput struct {
-	Name    string           `json:"name"`
-	URL     string           `json:"url"`
-	OneOf   []models.OneOf   `json:"one_of"`
-	Exclude []models.Exclude `json:"exclude"`
-	Checked []models.Checked `json:"checked"`
+	Name     string            `json:"name"`
+	URL      string            `json:"url"`
+	OneOf    []models.OneOf    `json:"one_of"`
+	Excluded []models.Excluded `json:"excluded"`
+	Checked  []models.Checked  `json:"checked"`
 }
 
 func (o ObservationInput) ToModel() models.Observation {
 	return models.Observation{
-		Name:    o.Name,
-		URL:     o.URL,
-		OneOf:   o.OneOf,
-		Exclude: o.Exclude,
-		Checked: o.Checked,
+		Name:     o.Name,
+		URL:      o.URL,
+		OneOf:    o.OneOf,
+		Excluded: o.Excluded,
+		Checked:  o.Checked,
 	}
 }
 
@@ -149,8 +149,8 @@ func (h *handler) DeleteObservations(c echo.Context) error {
 func getStatusCode(err error) int {
 	e := errors.ToErrorModel(err)
 	switch e.Message {
-	case errors.ErrInvalidExcludeFor,
-		errors.ErrInvalidExcludeValue,
+	case errors.ErrInvalidExcludedFor,
+		errors.ErrInvalidExcludedValue,
 		errors.ErrInvalidObservationName,
 		errors.ErrInvalidObservationURL,
 		errors.ErrInvalidOneOfFor,

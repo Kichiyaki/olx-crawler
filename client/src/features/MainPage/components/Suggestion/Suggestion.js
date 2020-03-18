@@ -12,10 +12,10 @@ import {
   CardActions,
   Typography,
   Button,
-  Link,
   Hidden,
   Box
 } from '@material-ui/core';
+import Link from '@common/Link/Link';
 import { red } from '@material-ui/core/colors';
 
 const useStyles = makeStyles(theme => ({
@@ -55,14 +55,14 @@ export default function Suggestion({ data }) {
             undefined
           )
         }
-        title={data.name}
+        title={data.title}
         subheader={format(new Date(data.created_at), DATE_FORMAT)}
       />
       {data.image && (
         <CardMedia
           className={classes.media}
           image={data.image}
-          title={data.name}
+          title={data.title}
         />
       )}
       <CardContent>

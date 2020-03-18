@@ -10,8 +10,8 @@ const (
 	ErrCannotDeleteObservations    = "observation.errCannotDelete"
 	ErrInvalidObservationName      = "observation.errInvalidName"
 	ErrInvalidObservationURL       = "observation.errInvalidURL"
-	ErrInvalidExcludeFor           = "exclude.errInvalidFor"
-	ErrInvalidExcludeValue         = "exclude.errInvalidValue"
+	ErrInvalidExcludedFor          = "excluded.errInvalidFor"
+	ErrInvalidExcludedValue        = "excluded.errInvalidValue"
 	ErrInvalidOneOfFor             = "oneOf.errInvalidFor"
 	ErrInvalidOneOfValue           = "oneOf.errInvalidValue"
 )

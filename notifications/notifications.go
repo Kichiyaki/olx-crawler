@@ -9,8 +9,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type NotificationsManager interface {
-	Notify() error
+type Manager interface {
+	Notify(string) error
 	Close() error
 }
 
@@ -19,7 +19,7 @@ type manager struct {
 	discord       *discordgo.Session
 }
 
-func NewNotificationsManager(configManager config.Manager) (NotificationsManager, error) {
+func NewManager(configManager config.Manager) (Manager, error) {
 	var firstErr error
 	m := &manager{
 		configManager: configManager,
@@ -39,13 +39,13 @@ func NewNotificationsManager(configManager config.Manager) (NotificationsManager
 	return m, firstErr
 }
 
-func (m *manager) Notify() error {
+func (m *manager) Notify(msg string) error {
 	cfg, err := m.configManager.Config()
 	if err != nil {
 		return err
 	}
 	if m.discord != nil && cfg.DiscordNotifications.Enabled && cfg.DiscordNotifications.ChannelID != "" {
-		_, err := m.discord.ChannelMessageSend(cfg.DiscordNotifications.ChannelID, "Jakaś wiadomość")
+		_, err := m.discord.ChannelMessageSend(cfg.DiscordNotifications.ChannelID, msg)
 		if err != nil {
 			return errors.Wrap(errors.ErrCannotSendDiscordNotification, []error{err})
 		}
