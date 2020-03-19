@@ -1,0 +1,58 @@
+{
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
+  "proxy": "http://localhost:8080",
+  "dependencies": {
+    "@material-ui/core": "^4.9.5",
+    "@material-ui/icons": "^4.9.1",
+    "@material-ui/lab": "^4.0.0-alpha.45",
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.3.2",
+    "@testing-library/user-event": "^7.1.2",
+    "@ungap/url-search-params": "^0.1.4",
+    "axios": "^0.19.2",
+    "classnames": "^2.2.6",
+    "date-fns": "^2.11.0",
+    "formik": "^2.1.4",
+    "lodash": "^4.17.15",
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0",
+    "react-infinite-scroll-component": "^5.0.4",
+    "react-router-dom": "^5.1.2",
+    "react-scripts": "3.4.0",
+    "react-spinners": "^0.8.1",
+    "yup": "^0.28.3"
+  },
+  "scripts": {
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/jest": "^25.1.4",
+    "axios-mock-adapter": "^1.17.0",
+    "babel-plugin-module-resolver": "^4.0.0",
+    "babel-plugin-transform-imports": "^2.0.0",
+    "customize-cra": "^0.9.1",
+    "jest-date-mock": "^1.0.8",
+    "react-act": "^1.0.1",
+    "react-app-rewired": "^2.1.5"
+  }
+}
