@@ -3,7 +3,8 @@ export const CONFIG = {
 };
 
 export const SUGGESTIONS = {
-  BROWSE: '/api/suggestions'
+  BROWSE: '/api/suggestions',
+  DELETE: '/api/suggestions'
 };
 
 export const OBSERVATIONS = {

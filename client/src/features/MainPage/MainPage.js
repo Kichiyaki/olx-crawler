@@ -1,30 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CONFIG, SUGGESTIONS } from '@config/api_routes';
+import useSnackbar, { SEVERITY } from '@libs/useSnackbar';
+import { SUGGESTIONS } from '@config/api_routes';
 import isAPIError from '@utils/isAPIError';
 import { getSuggestionsReqParams } from './utils';
 
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { Grid, Container, Typography } from '@material-ui/core';
+import {
+  Grid,
+  Container,
+  Typography,
+  Snackbar,
+  Button
+} from '@material-ui/core';
+import { Alert } from '@material-ui/lab';
 import ErrorPage from '@features/ErrorPage/ErrorPage';
 import AppLayout, { CONTAINER_ID } from '@common/AppLayout/AppLayout';
 import Spinner from '@common/Spinner/Spinner';
 import Suggestion from './components/Suggestion/Suggestion';
 
 export default function MainPage() {
-  const [config, setConfig] = useState(undefined);
   const [suggestions, setSuggestions] = useState(undefined);
+  const [selected, setSelected] = useState([]);
   const [statusCode, setStatusCode] = useState(200);
   const [error, setError] = useState('');
+  const {
+    setSeverity,
+    setMessage,
+    message,
+    alertProps,
+    snackbarProps
+  } = useSnackbar({
+    anchorOrigin: { vertical: 'top', horizontal: 'right' }
+  });
 
   useEffect(() => {
-    Promise.all([
-      axios.get(CONFIG.READ),
-      axios.get(SUGGESTIONS.BROWSE + '?' + getSuggestionsReqParams())
-    ])
-      .then(responses => {
-        setConfig(responses[0].data.data);
-        setSuggestions(responses[1].data.data);
+    axios
+      .get(SUGGESTIONS.BROWSE + '?' + getSuggestionsReqParams())
+      .then(response => {
+        setSuggestions(response.data.data);
       })
       .catch(error => {
         if (isAPIError(error)) {
@@ -56,11 +70,48 @@ export default function MainPage() {
     } catch (error) {}
   };
 
+  const createSelectHandler = id => () => {
+    if (selected.some(otherID => otherID === id)) {
+      setSelected(selected.filter(otherID => otherID !== id));
+    } else {
+      setSelected([...selected, id]);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const response = await axios.delete(
+        SUGGESTIONS.DELETE + '?id=' + selected.join(',')
+      );
+      if (Array.isArray(response.data.data)) {
+        setSuggestions({
+          total: suggestions.total - response.data.data.length,
+          items: suggestions.items.filter(
+            item =>
+              !response.data.data.some(otherItem => otherItem.id === item.id)
+          )
+        });
+        setSelected([]);
+        setSeverity(SEVERITY.SUCCESS);
+        setMessage(`Pomyślnie usunięto ${response.data.data.length} sugestie.`);
+      }
+    } catch (error) {
+      if (isAPIError(error)) {
+        setSeverity(SEVERITY.ERROR);
+        setMessage(error.response.data.errors[0].message);
+      }
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSelected([]);
+  };
+
   if (error || statusCode !== 200) {
     return <ErrorPage statusCode={statusCode} error={error} />;
   }
 
-  const loading = !suggestions || !config;
+  const loading = !suggestions;
 
   return (
     <AppLayout>
@@ -79,15 +130,52 @@ export default function MainPage() {
             scrollableTarget={CONTAINER_ID}
           >
             <Grid container spacing={2}>
-              {suggestions.items.map(suggestion => (
-                <Grid key={suggestion.id} xs={4} item>
-                  <Suggestion data={suggestion} />
-                </Grid>
-              ))}
+              {suggestions.items.length === 0 ? (
+                <Typography variant="h3" component="h2">
+                  Brak sugestii
+                </Typography>
+              ) : (
+                suggestions.items.map(suggestion => (
+                  <Grid key={suggestion.id} xs={4} item>
+                    <Suggestion
+                      onSelect={createSelectHandler(suggestion.id)}
+                      selected={selected.some(id => id === suggestion.id)}
+                      data={suggestion}
+                    />
+                  </Grid>
+                ))
+              )}
             </Grid>
           </InfiniteScroll>
+          <Snackbar
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right'
+            }}
+            ClickAwayListenerProps={{ mouseEvent: false }}
+            open={selected.length > 0}
+            onClose={handleSnackbarClose}
+            message={`Wybrano ${selected.length} sugestie.`}
+            action={
+              <>
+                <Button onClick={handleDelete} color="secondary" size="small">
+                  Usuń
+                </Button>
+                <Button
+                  color="secondary"
+                  onClick={handleSnackbarClose}
+                  size="small"
+                >
+                  Anuluj
+                </Button>
+              </>
+            }
+          />
         </Container>
       )}
+      <Snackbar {...snackbarProps}>
+        <Alert {...alertProps}>{message}</Alert>
+      </Snackbar>
     </AppLayout>
   );
 }
