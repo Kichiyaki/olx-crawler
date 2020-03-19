@@ -7,6 +7,7 @@
     "token": "NTkyMjkwNjA0NjUwODU2NDU4.XnC9vw.6VzHrReWo1dxgUOM9hydp4J_oSw"
   },
   "port": 8080,
+  "lang": "pl",
   "proxies": [
     "socks5://Kichiyaki:ZLZP2Dj2SwoC@pl7.vpn.mydevil.net:8888",
     "socks5://Kichiyaki:ZLZP2Dj2SwoC@pl6.vpn.mydevil.net:8888",
@@ -16,9 +17,5 @@
     "socks5://Kichiyaki:ZLZP2Dj2SwoC@pl2.vpn.mydevil.net:8888",
     "socks5://Kichiyaki:ZLZP2Dj2SwoC@pl.vpn.mydevil.net:8888"
   ],
-  "lang": "pl",
-  "cron": {
-    "enabled": false
-  },
   "debug": true
 }

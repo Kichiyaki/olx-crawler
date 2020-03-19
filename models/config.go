@@ -14,4 +14,5 @@ type Config struct {
 	Port    uint     `json:"port"`
 	Lang    string   `json:"lang" mapstructure:"lang"`
 	Proxies []string `json:"proxies,omitempty" mapstructure:"proxies"`
+	Debug   bool     `json:"debug" mapstructure:"debug"`
 }

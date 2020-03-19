@@ -69,6 +69,7 @@ export default function Suggestion({ data }) {
         <Typography component="p">Cena: {data.price}</Typography>
       </CardContent>
       <CardActions disableSpacing className={classes.actions}>
+        <Button color="secondary">Usuń</Button>
         <Button>
           <Link color="secondary" underline="none" to={data.url}>
             Przejdź do aukcji

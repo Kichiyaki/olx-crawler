@@ -46,9 +46,13 @@ func main() {
 	if err := configManager.Init(); err != nil {
 		logrus.Fatal(err)
 	}
+	cfg, err := configManager.Config()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	//Logger
-	if configManager.GetBool("debug") {
+	if cfg.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
@@ -61,6 +65,21 @@ func main() {
 		MaxAge:     1, //days
 	})
 
+	//I18N
+	i18n.LoadMessageFiles("./i18n/locales")
+
+	if cfg.Lang == "" {
+		var err error
+		cfg.Lang, err = systemLang.DetectLanguage()
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		if err := configManager.Save(cfg); err != nil {
+			logrus.Fatal(err)
+		}
+	}
+	i18n.SetLanguage(cfg.Lang)
+
 	//Notifications
 	notificationsManager, err := notifications.NewManager(configManager)
 	if err != nil {
@@ -71,19 +90,6 @@ func main() {
 			logrus.Fatal(err)
 		}
 	}()
-
-	//I18N
-	i18n.LoadMessageFiles("i18n/locales")
-
-	lang := configManager.GetString("lang")
-	if lang == "" {
-		var err error
-		lang, err = systemLang.DetectLanguage()
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}
-	i18n.SetLanguage(lang)
 
 	//DB
 	db, err := gorm.Open("sqlite3", "olx_crawler.db")
@@ -120,45 +126,6 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	// s := true
-	// observationRepo.Store(&models.Observation{
-	// 	Name: "Dysk SSD",
-	// 	URL:  "https://www.olx.pl/elektronika/q-Dysk-SSD/?search%5Bfilter_float_price%3Afrom%5D=100&search%5Bfilter_float_price%3Ato%5D=500",
-	// 	OneOf: []models.OneOf{
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128 GB",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128 gb",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128GB",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128gb",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "description",
-	// 			Value: "m2",
-	// 		},
-	// 	},
-	// 	Excluded: []models.Excluded{
-	// 		models.Excluded{
-	// 			For:   "title",
-	// 			Value: "komputer",
-	// 		},
-	// 		models.Excluded{
-	// 			For:   "title",
-	// 			Value: "laptop",
-	// 		},
-	// 	},
-	// 	Started: &s,
-	// })
-
 	//USECASES
 	observationUcase := _observationUsecase.NewObservationUsecase(observationRepo)
 	suggestionUcase := _suggestionUsecase.NewSuggestionUsecase(suggestionRepo)
@@ -184,17 +151,17 @@ func main() {
 	e.HidePort = true
 	e.Use(middleware.Recover())
 	e.Use(_middleware.Logger())
-	e.Static("/", "/public")
+	e.Static("/", "./public")
 	g := e.Group("/api")
 	_observationHTTPDelivery.NewObservationHandler(g, observationUcase)
 	_suggestionHTTPDelivery.NewSuggestionHandler(g, suggestionUcase)
 	_configHTTPDelivery.NewConfigHandler(g, configManager)
 
-	url := fmt.Sprintf(":%d", configManager.GetInt("port"))
+	url := fmt.Sprintf(":%d", cfg.Port)
 	go func() {
 		e.Start(url)
 	}()
-	logrus.Infof("Server is listening on port %s", e.Server.Addr)
+	logrus.Infof("Server is listening on port %s", url)
 	if err := openbrowser(fmt.Sprintf("http://localhost%s", url)); err != nil {
 		logrus.Fatal(err)
 	}
