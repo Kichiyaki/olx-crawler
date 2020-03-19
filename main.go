@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	_collySqliteStorage "olx-crawler/colly/sqlite3"
 	"olx-crawler/config"
 	_configHTTPDelivery "olx-crawler/config/delivery/http"
 	_cron "olx-crawler/cron"
 	"olx-crawler/i18n"
+	_middleware "olx-crawler/middleware"
 	"olx-crawler/notifications"
 	_observationHTTPDelivery "olx-crawler/observation/delivery/http"
 	_observationRepository "olx-crawler/observation/repository"
@@ -21,6 +23,10 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/robfig/cron/v3"
 
@@ -38,16 +44,32 @@ func main() {
 	//Config
 	configManager := config.NewManager()
 	if err := configManager.Init(); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
+
+	//Logger
+	if configManager.GetBool("debug") {
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(logrus.InfoLevel)
+	}
+
+	logrus.SetOutput(&lumberjack.Logger{
+		Filename:   "./logs/olx_crawler.log",
+		MaxSize:    5, // megabytes
+		MaxBackups: 3,
+		MaxAge:     1, //days
+	})
 
 	//Notifications
 	notificationsManager, err := notifications.NewManager(configManager)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	defer func() {
-		notificationsManager.Close()
+		if err := notificationsManager.Close(); err != nil {
+			logrus.Fatal(err)
+		}
 	}()
 
 	//I18N
@@ -58,27 +80,44 @@ func main() {
 		var err error
 		lang, err = systemLang.DetectLanguage()
 		if err != nil {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 	}
 	i18n.SetLanguage(lang)
 
 	//DB
 	db, err := gorm.Open("sqlite3", "olx_crawler.db")
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logrus.Fatal(err)
+		}
+	}()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
+	db.LogMode(false)
 	db.Exec("PRAGMA foreign_keys = ON;")
+	db.Exec("PRAGMA synchronous = OFF;")
+	db.Exec("PRAGMA temp_store = MEMORY;")
+	db.Exec("PRAGMA journal_mode = WAL;")
 
+	//COLLY CACHE
+	collyStorage := &_collySqliteStorage.Storage{
+		Filename: "colly_cache.db",
+	}
+	defer func() {
+		if err := collyStorage.Close(); err != nil {
+			logrus.Fatal(err)
+		}
+	}()
 	//REPOSITORIES
 	observationRepo, err := _observationRepository.NewObservationRepository(db)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	suggestionRepo, err := _suggestionRepository.NewSuggestionRepository(db)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	// s := true
@@ -132,9 +171,10 @@ func main() {
 		ObservationRepo:      observationRepo,
 		SuggestionRepo:       suggestionRepo,
 		ConfigManager:        configManager,
+		CollyStorage:         collyStorage,
 	})
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	c.Start()
 	defer c.Stop()
@@ -143,7 +183,7 @@ func main() {
 	e.HideBanner = true
 	e.HidePort = true
 	e.Use(middleware.Recover())
-	e.Use(middleware.Logger())
+	e.Use(_middleware.Logger())
 	e.Static("/", "/public")
 	g := e.Group("/api")
 	_observationHTTPDelivery.NewObservationHandler(g, observationUcase)
@@ -154,9 +194,9 @@ func main() {
 	go func() {
 		e.Start(url)
 	}()
-	log.Printf("Server is listening on port %d", configManager.GetInt("port"))
+	logrus.Infof("Server is listening on port %s", e.Server.Addr)
 	if err := openbrowser(fmt.Sprintf("http://localhost%s", url)); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
 	channel := make(chan os.Signal, 1)
@@ -166,7 +206,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	e.Shutdown(ctx)
-	log.Print("shutting down")
+	logrus.Info("shutting down")
 }
 
 func openbrowser(url string) error {

@@ -1,6 +1,6 @@
 {
   "version": "0.1",
-  "colly": { "delay": 5, "limit": 2 },
+  "colly": { "delay": 5, "limit": 1 },
   "discord_notifications": {
     "channel_id": "592767248268132362",
     "enabled": true,
@@ -19,5 +19,6 @@
   "lang": "pl",
   "cron": {
     "enabled": false
-  }
+  },
+  "debug": true
 }

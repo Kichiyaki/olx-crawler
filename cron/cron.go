@@ -2,25 +2,28 @@ package cron
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
+	"olx-crawler/colly/debug"
 	"olx-crawler/config"
 	"olx-crawler/models"
 	"olx-crawler/notifications"
 	"olx-crawler/observation"
 	"olx-crawler/suggestion"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/gocolly/colly/v2/storage"
 
 	"github.com/goodsign/monday"
 
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/gocolly/colly/v2/proxy"
-
-	"github.com/gocolly/colly/v2/debug"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
@@ -32,7 +35,9 @@ type handler struct {
 	observationRepo      observation.Repository
 	suggestionRepo       suggestion.Repository
 	configManager        config.Manager
+	collyStorage         storage.Storage
 	collector            *colly.Collector
+	logrus               *logrus.Entry
 }
 
 type Config struct {
@@ -40,6 +45,7 @@ type Config struct {
 	ObservationRepo      observation.Repository
 	SuggestionRepo       suggestion.Repository
 	ConfigManager        config.Manager
+	CollyStorage         storage.Storage
 }
 
 func AttachHandlers(c *cron.Cron, cfg *Config) error {
@@ -47,7 +53,7 @@ func AttachHandlers(c *cron.Cron, cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	collector, err := getCollector(globalCfg)
+	collector, err := getCollector(cfg.CollyStorage, globalCfg)
 	if err != nil {
 		return err
 	}
@@ -56,7 +62,9 @@ func AttachHandlers(c *cron.Cron, cfg *Config) error {
 		cfg.ObservationRepo,
 		cfg.SuggestionRepo,
 		cfg.ConfigManager,
+		cfg.CollyStorage,
 		collector,
+		logrus.WithField("package", "cron"),
 	}
 	cfg.ConfigManager.OnConfigChange(h.handleConfigChange)
 
@@ -89,15 +97,13 @@ func (h *handler) fetchSuggestions() {
 		}
 		description := strings.Trim(e.Text, "")
 		if isValid(currentObservation.OneOf, currentObservation.Excluded, description, "description") {
-			mutex.Lock()
-			delete(suggestions, suggestion.URL)
-			mutex.Unlock()
 			if err := h.suggestionRepo.Store(suggestion); err != nil {
 				return
 			}
 			h.notificationsManager.Notify(fmt.Sprintf("%s: Hejho, powinieneś się tym zainteresować %s",
 				currentObservation.Name,
 				suggestion.URL))
+			h.logrus.WithField("suggestion_id", suggestion.ID).Debug("new suggestion")
 		}
 
 		o := &models.Observation{
@@ -118,7 +124,7 @@ func (h *handler) fetchSuggestions() {
 
 	collector.OnHTML(".wrap", func(e *colly.HTMLElement) {
 		s := parseHTMLElementToSuggestionStruct(e)
-		if visited, _ := collector.HasVisited(s.URL); visited {
+		if _, ok := suggestions[s.URL]; ok {
 			return
 		}
 		for _, checked := range currentObservation.Checked {
@@ -162,7 +168,7 @@ func (h *handler) fetchSuggestions() {
 	})
 
 	for _, observation := range observations {
-		log.Printf("%s: Fetching suggestions...", observation.Name)
+		h.logrus.WithField("observation", observation.Name).Info("Fetching suggestions...")
 		currentObservation = observation
 		collector.Visit(observation.URL)
 		collector.Wait()
@@ -177,18 +183,19 @@ func (h *handler) handleConfigChange(fsnotify.Event) {
 	if err != nil {
 		return
 	}
-	c, err := getCollector(cfg)
+	c, err := getCollector(h.collyStorage, cfg)
 	if err != nil {
 		h.collector = c
 	}
 }
 
-func getCollector(cfg *models.Config) (*colly.Collector, error) {
+func getCollector(s storage.Storage, cfg *models.Config) (*colly.Collector, error) {
 	collector := colly.NewCollector(
-		colly.Debugger(&debug.LogDebugger{}),
+		colly.Debugger(&debug.LogrusDebugger{}),
 		colly.Async(true),
 		colly.AllowURLRevisit(),
 	)
+	collector.DisableCookies()
 	extensions.RandomMobileUserAgent(collector)
 	proxiesLength := len(cfg.Proxies)
 	if cfg.Colly.Limit > 0 {
@@ -196,11 +203,20 @@ func getCollector(cfg *models.Config) (*colly.Collector, error) {
 		if proxiesLength > 0 {
 			limit *= proxiesLength
 		}
+		numCPU := runtime.NumCPU()
+		if limit > numCPU*10 {
+			limit = numCPU * 10
+		}
 		collector.Limit(&colly.LimitRule{
 			DomainGlob:  "*",
 			Parallelism: limit,
 			RandomDelay: time.Duration(cfg.Colly.Delay) * time.Second,
 		})
+	}
+	if s != nil {
+		if err := collector.SetStorage(s); err != nil {
+			return nil, err
+		}
 	}
 	if proxiesLength > 0 {
 		transport, err := getHTTPTransport(cfg.Proxies)
@@ -284,8 +300,11 @@ func isValid(o []models.OneOf, e []models.Excluded, text, f string) bool {
 
 func isAfter(t time.Time, url, text string) bool {
 	if strings.Contains(url, "olx.pl") {
-		if (strings.Contains(text, "dzisiaj") && !isTodaysDate(t)) ||
-			(strings.Contains(text, "wczoraj") && !isYestardaysDate(t)) {
+		if strings.Contains(text, "wczoraj") && isTodayDate(t) {
+			return false
+		}
+		if (strings.Contains(text, "dzisiaj") && !isTodayDate(t)) ||
+			(strings.Contains(text, "wczoraj") && !isYestardayDate(t)) {
 			return true
 		}
 		if strings.Contains(text, "dzisiaj") || strings.Contains(text, "wczoraj") {
@@ -314,12 +333,12 @@ func isAfter(t time.Time, url, text string) bool {
 	return false
 }
 
-func isTodaysDate(t time.Time) bool {
+func isTodayDate(t time.Time) bool {
 	now := time.Now()
 	return t.Month() == now.Month() && t.Day() == now.Day() && t.Year() == now.Year()
 }
 
-func isYestardaysDate(t time.Time) bool {
+func isYestardayDate(t time.Time) bool {
 	yesterday := time.Now().AddDate(0, 0, -1)
 	return t.Month() == yesterday.Month() && t.Day() == yesterday.Day() && t.Year() == yesterday.Year()
 }

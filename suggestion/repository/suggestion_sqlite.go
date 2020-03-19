@@ -4,12 +4,15 @@ import (
 	"olx-crawler/errors"
 	"olx-crawler/models"
 	"olx-crawler/suggestion"
+	"olx-crawler/utils"
 
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 )
 
 type repository struct {
-	db *gorm.DB
+	db     *gorm.DB
+	logrus *logrus.Entry
 }
 
 func NewSuggestionRepository(db *gorm.DB) (suggestion.Repository, error) {
@@ -20,6 +23,7 @@ func NewSuggestionRepository(db *gorm.DB) (suggestion.Repository, error) {
 		if !db.HasTable(model) {
 			errs := db.CreateTable(model).GetErrors()
 			if len(errs) > 0 {
+				logrus.Debugf("Cannot create table: %v", errs)
 				err = errors.Wrap(errors.ErrTableCannotBeCreated, errs)
 				break
 			}
@@ -27,12 +31,14 @@ func NewSuggestionRepository(db *gorm.DB) (suggestion.Repository, error) {
 	}
 	return &repository{
 		db.Set("gorm:auto_preload", true),
+		logrus.WithField("package", "suggesion/repository"),
 	}, err
 }
 
 func (repo *repository) Store(s *models.Suggestion) error {
 	errs := repo.db.Create(s).GetErrors()
 	if len(errs) > 0 {
+		repo.logrus.WithField("suggestion", string(utils.MustMarshal(s))).Debugf("Cannot store suggestion: %v", errs)
 		return errors.Wrap(errors.ErrCannotCreateSuggestion, errs)
 	}
 	return nil
@@ -46,6 +52,7 @@ func (repo *repository) Update(input *models.Suggestion) error {
 		Updates(input).
 		GetErrors()
 	if len(errs) > 0 {
+		repo.logrus.WithField("suggestion", string(utils.MustMarshal(input))).Debugf("Cannot update suggestion: %v", errs)
 		return errors.Wrap(errors.ErrCannotUpdateSuggestion, errs)
 	}
 	return nil
@@ -54,6 +61,11 @@ func (repo *repository) Update(input *models.Suggestion) error {
 func (repo *repository) Delete(f *models.SuggestionFilter) error {
 	errs := repo.appendFilter(f).Delete(&[]models.Suggestion{}).GetErrors()
 	if len(errs) > 0 {
+		if f != nil {
+			repo.logrus.WithField("filter", string(utils.MustMarshal(f))).Debugf("Cannot fetch suggestions: %v", errs)
+		} else {
+			repo.logrus.WithField("filter", "{}").Debugf("Cannot fetch suggestions: %v", errs)
+		}
 		return errors.Wrap(errors.ErrCannotDeleteSuggestions, errs)
 	}
 	return nil
@@ -61,16 +73,25 @@ func (repo *repository) Delete(f *models.SuggestionFilter) error {
 
 func (repo *repository) Fetch(f *models.SuggestionFilter) (models.PaginatedResponse, error) {
 	response := models.PaginatedResponse{}
-	observations := []*models.Suggestion{}
+	suggestions := []*models.Suggestion{}
 	q := repo.appendFilter(f)
-	errs := q.Find(&observations).GetErrors()
+	errs := q.Find(&suggestions).GetErrors()
 	if len(errs) > 0 {
+		if f != nil {
+			repo.logrus.WithField("filter", string(utils.MustMarshal(f))).Debugf("Cannot fetch suggestions: %v", errs)
+		} else {
+			repo.logrus.WithField("filter", "{}").Debugf("Cannot fetch suggestions: %v", errs)
+		}
 		return response, errors.Wrap(errors.ErrCannotFetchSuggestions, errs)
 	}
-	response.Items = observations
+	response.Items = suggestions
 	errs = q.Model(&models.Suggestion{}).Limit(-1).Offset(-1).Count(&response.Total).GetErrors()
 	if len(errs) > 0 {
-
+		if f != nil {
+			repo.logrus.WithField("filter", string(utils.MustMarshal(f))).Debugf("Cannot fetch suggestions: %v", errs)
+		} else {
+			repo.logrus.WithField("filter", "{}").Debugf("Cannot fetch suggestions: %v", errs)
+		}
 		return response, errors.Wrap(errors.ErrCannotFetchSuggestions, errs)
 	}
 	return response, nil
@@ -80,6 +101,7 @@ func (repo *repository) GetByID(id uint) (*models.Suggestion, error) {
 	o := &models.Suggestion{}
 	errs := repo.db.Where("id = ?", id).First(o).GetErrors()
 	if len(errs) > 0 {
+		repo.logrus.WithField("id", id).Debugf("Cannot get suggestion: %v", errs)
 		return nil, errors.Wrap(errors.ErrSuggestionNotFound, errs)
 	}
 	return o, nil

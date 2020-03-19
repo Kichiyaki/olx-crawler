@@ -3,6 +3,9 @@ package usecase
 import (
 	"olx-crawler/models"
 	"olx-crawler/observation"
+	"olx-crawler/utils"
+
+	"github.com/sirupsen/logrus"
 )
 
 type usecase struct {
@@ -29,6 +32,7 @@ func (ucase *usecase) GetByID(id uint) (*models.Observation, error) {
 
 func (ucase *usecase) Store(o *models.Observation) error {
 	if err := newConfig().validate(*o); err != nil {
+		logrus.WithField("observation", string(utils.MustMarshal(o))).Debugf("Cannot store observation: %s", err.Error())
 		return err
 	}
 
@@ -50,6 +54,7 @@ func (ucase *usecase) Update(o *models.Observation) (*models.Observation, error)
 		cfg.OneOf = false
 	}
 	if err := cfg.validate(*o); err != nil {
+		logrus.WithField("observation", string(utils.MustMarshal(o))).Debugf("Cannot update observation: %s", err.Error())
 		return nil, err
 	}
 	if err := ucase.observationRepo.Update(o); err != nil {
