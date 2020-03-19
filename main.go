@@ -9,6 +9,7 @@ import (
 	_configHTTPDelivery "olx-crawler/config/delivery/http"
 	_cron "olx-crawler/cron"
 	"olx-crawler/i18n"
+	"olx-crawler/menu"
 	_middleware "olx-crawler/middleware"
 	"olx-crawler/notifications"
 	_observationHTTPDelivery "olx-crawler/observation/delivery/http"
@@ -17,10 +18,9 @@ import (
 	_suggestionHTTPDelivery "olx-crawler/suggestion/delivery/http"
 	_suggestionRepository "olx-crawler/suggestion/repository"
 	_suggestionUsecase "olx-crawler/suggestion/usecase"
+	"olx-crawler/utils"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -162,32 +162,20 @@ func main() {
 		e.Start(url)
 	}()
 	logrus.Infof("Server is listening on port %s", url)
-	if err := openbrowser(fmt.Sprintf("http://localhost%s", url)); err != nil {
+	serverURL := fmt.Sprintf("http://localhost%s", url)
+	if err := utils.OpenBrowser(serverURL); err != nil {
 		logrus.Fatal(err)
 	}
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
+	if os.Getenv("DISABLE_MENU") != "true" {
+		menu.New(serverURL, channel)
+	}
 	<-channel
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	e.Shutdown(ctx)
 	logrus.Info("shutting down")
-}
-
-func openbrowser(url string) error {
-	var err error
-
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("cmd", "/C", "start", url).Run()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	default:
-		err = fmt.Errorf("unsupported platform")
-	}
-	return err
 }

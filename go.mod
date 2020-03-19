@@ -11,6 +11,7 @@ require (
 	github.com/cloudfoundry-attic/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21
 	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/getlantern/systray v0.0.0-20200316125333-beec733178c8
 	github.com/go-pg/pg/v9 v9.1.0 // indirect
 	github.com/go-pg/urlstruct v0.3.0
 	github.com/gocolly/colly/v2 v2.0.1
@@ -20,6 +21,8 @@ require (
 	github.com/jinzhu/gorm v1.9.12
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.15
+	github.com/lxn/walk v0.0.0-20191128110447-55ccb3a9f5c1 // indirect
+	github.com/lxn/win v0.0.0-20191128105842-2da648fda5b4 // indirect
 	github.com/mattn/go-sqlite3 v2.0.1+incompatible
 	github.com/nicksnyder/go-i18n/v2 v2.0.3
 	github.com/onsi/ginkgo v1.12.0 // indirect
