@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
+import useRequest from '@libs/useRequest';
 import useSnackbar, { SEVERITY } from '@libs/useSnackbar';
 import { SUGGESTIONS } from '@config/api_routes';
+import { MAIN_PAGE } from '@config/namespaces';
 import isAPIError from '@utils/isAPIError';
 import { getSuggestionsReqParams } from './utils';
 
 import InfiniteScroll from 'react-infinite-scroll-component';
-import {
-  Grid,
-  Container,
-  Typography,
-  Snackbar,
-  Button
-} from '@material-ui/core';
+import { Grid, Typography, Snackbar, Button } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import ErrorPage from '@features/ErrorPage/ErrorPage';
 import AppLayout, { CONTAINER_ID } from '@common/AppLayout/AppLayout';
@@ -20,10 +17,7 @@ import Spinner from '@common/Spinner/Spinner';
 import Suggestion from './components/Suggestion/Suggestion';
 
 export default function MainPage() {
-  const [suggestions, setSuggestions] = useState(undefined);
   const [selected, setSelected] = useState([]);
-  const [statusCode, setStatusCode] = useState(200);
-  const [error, setError] = useState('');
   const {
     setSeverity,
     setMessage,
@@ -33,22 +27,13 @@ export default function MainPage() {
   } = useSnackbar({
     anchorOrigin: { vertical: 'top', horizontal: 'right' }
   });
-
-  useEffect(() => {
-    axios
-      .get(SUGGESTIONS.BROWSE + '?' + getSuggestionsReqParams())
-      .then(response => {
-        setSuggestions(response.data.data);
-      })
-      .catch(error => {
-        if (isAPIError(error)) {
-          setError(error.response.data.data.errors[0].message);
-        }
-        if (error.response) {
-          setStatusCode(error.response.status);
-        }
-      });
-  }, []);
+  const { t } = useTranslation(MAIN_PAGE);
+  const {
+    data: suggestions,
+    setData: setSuggestions,
+    statusCode,
+    error
+  } = useRequest(SUGGESTIONS.BROWSE + '?' + getSuggestionsReqParams());
 
   const loadMore = async () => {
     try {
@@ -93,7 +78,7 @@ export default function MainPage() {
         });
         setSelected([]);
         setSeverity(SEVERITY.SUCCESS);
-        setMessage(`Pomyślnie usunięto ${response.data.data.length} sugestie.`);
+        setMessage(t('deleted', { count: response.data.data.length }));
       }
     } catch (error) {
       if (isAPIError(error)) {
@@ -117,9 +102,9 @@ export default function MainPage() {
     <AppLayout>
       {loading && <Spinner />}
       {!loading && (
-        <Container>
+        <div>
           <Typography gutterBottom align="center" variant="h2" component="h1">
-            Sugestie
+            {t('title')}
           </Typography>
           <InfiniteScroll
             hasMore={suggestions.items.length !== suggestions.total}
@@ -132,12 +117,13 @@ export default function MainPage() {
             <Grid container spacing={2}>
               {suggestions.items.length === 0 ? (
                 <Typography variant="h3" component="h2">
-                  Brak sugestii
+                  {t('emptyArray')}
                 </Typography>
               ) : (
                 suggestions.items.map(suggestion => (
-                  <Grid key={suggestion.id} xs={4} item>
+                  <Grid key={suggestion.id} xs={3} item>
                     <Suggestion
+                      t={t}
                       onSelect={createSelectHandler(suggestion.id)}
                       selected={selected.some(id => id === suggestion.id)}
                       data={suggestion}
@@ -155,23 +141,23 @@ export default function MainPage() {
             ClickAwayListenerProps={{ mouseEvent: false }}
             open={selected.length > 0}
             onClose={handleSnackbarClose}
-            message={`Wybrano ${selected.length} sugestie.`}
+            message={t('selected', { count: selected.length })}
             action={
               <>
                 <Button onClick={handleDelete} color="secondary" size="small">
-                  Usuń
+                  {t('delete')}
                 </Button>
                 <Button
                   color="secondary"
                   onClick={handleSnackbarClose}
                   size="small"
                 >
-                  Anuluj
+                  {t('cancel')}
                 </Button>
               </>
             }
           />
-        </Container>
+        </div>
       )}
       <Snackbar {...snackbarProps}>
         <Alert {...alertProps}>{message}</Alert>

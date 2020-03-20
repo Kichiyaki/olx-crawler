@@ -30,9 +30,9 @@ func (m *menu) onReady() {
 		return
 	}
 	systray.SetTemplateIcon(icon, icon)
-	systray.SetTitle("Olx-Crawler")
+	systray.SetTitle("Olx Crawler")
 	systray.SetTooltip("Pretty awesome")
-	mOpenBrowser := systray.AddMenuItem("New OLX-Crawler window", "Open new OLX-Crawler window in the browser")
+	mOpenBrowser := systray.AddMenuItem("New OLX Crawler window", "Open new OLX Crawler window in the browser")
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	go func() {
 		for {

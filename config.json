@@ -1,5 +1,5 @@
 {
-  "version": "0.1",
+  "version": "0.1.5",
   "colly": { "delay": 5, "limit": 1 },
   "discord_notifications": {
     "channel_id": "592767248268132362",

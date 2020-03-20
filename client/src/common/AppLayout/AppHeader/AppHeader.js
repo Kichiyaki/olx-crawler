@@ -49,7 +49,7 @@ const useStyles = makeStyles(theme => {
   };
 });
 
-const AppHeader = ({ isOpen, onDrawerOpen, noBoxShadow }) => {
+const AppHeader = ({ isOpen, onDrawerOpen, noBoxShadow, t }) => {
   const classes = useStyles({ noBoxShadow });
   return (
     <AppBar
@@ -73,7 +73,7 @@ const AppHeader = ({ isOpen, onDrawerOpen, noBoxShadow }) => {
           {NAME}
         </Typography>
         <div style={{ flex: 1 }} />
-        <Tooltip title="Strona aplikacji">
+        <Tooltip title={t('appLayout.appHeader.website')}>
           <IconButton color="inherit">
             <Link to="https://dawid-wysokinski.pl">
               <LanguageIcon />

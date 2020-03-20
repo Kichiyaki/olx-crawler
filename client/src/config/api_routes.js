@@ -8,5 +8,6 @@ export const SUGGESTIONS = {
 };
 
 export const OBSERVATIONS = {
-  BROWSE: '/api/observations'
+  BROWSE: '/api/observations',
+  DELETE: '/api/observations'
 };

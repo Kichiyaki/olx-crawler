@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import classnames from 'classnames';
+import { useTranslation } from 'react-i18next';
+import { COMMON } from '@config/namespaces';
 
 import { makeStyles } from '@material-ui/core/styles';
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -24,6 +26,7 @@ export const CONTAINER_ID = 'content';
 const PageLayout = ({ children, headerProps, noPadding, className }) => {
   const [isOpen, setIsOpen] = useState(false);
   const classes = useStyles({ noPadding });
+  const { t } = useTranslation(COMMON);
 
   const handleDrawerOpen = () => setIsOpen(!isOpen);
 
@@ -34,8 +37,9 @@ const PageLayout = ({ children, headerProps, noPadding, className }) => {
         {...headerProps}
         onDrawerOpen={handleDrawerOpen}
         isOpen={isOpen}
+        t={t}
       />
-      <Drawer onOpen={handleDrawerOpen} isOpen={isOpen} />
+      <Drawer onOpen={handleDrawerOpen} isOpen={isOpen} t={t} />
       <main
         className={classnames(classes.content, className)}
         id={CONTAINER_ID}

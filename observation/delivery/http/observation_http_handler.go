@@ -10,6 +10,7 @@ import (
 	"olx-crawler/utils"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 
@@ -22,20 +23,20 @@ type handler struct {
 }
 
 type ObservationInput struct {
-	Name     string            `json:"name"`
-	URL      string            `json:"url"`
-	OneOf    []models.OneOf    `json:"one_of"`
-	Excluded []models.Excluded `json:"excluded"`
-	Checked  []models.Checked  `json:"checked"`
+	Name        string            `json:"name"`
+	URL         string            `json:"url"`
+	OneOf       []models.OneOf    `json:"one_of"`
+	Excluded    []models.Excluded `json:"excluded"`
+	LastCheckAt time.Time         `json:"last_check_at"`
 }
 
 func (o ObservationInput) ToModel() models.Observation {
 	return models.Observation{
-		Name:     o.Name,
-		URL:      o.URL,
-		OneOf:    o.OneOf,
-		Excluded: o.Excluded,
-		Checked:  o.Checked,
+		Name:        o.Name,
+		URL:         o.URL,
+		OneOf:       o.OneOf,
+		Excluded:    o.Excluded,
+		LastCheckAt: o.LastCheckAt,
 	}
 }
 

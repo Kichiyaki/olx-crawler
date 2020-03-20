@@ -10,7 +10,7 @@ type Observation struct {
 	URL         string     `gorm:"unique_index;column:url" json:"url"`
 	OneOf       []OneOf    `gorm:"foreignkey:observation_id" json:"one_of,omitempty"`
 	Excluded    []Excluded `gorm:"foreignkey:observation_id" json:"excluded,omitempty"`
-	Checked     []Checked  `gorm:"foreignkey:observation_id" json:"checked,omitempty"`
+	Checked     []Checked  `gorm:"foreignkey:observation_id" json:"-"`
 	Started     *bool      `gorm:"column:started" json:"started,omitempty"`
 	LastCheckAt time.Time  `gorm:"column:last_check_at" json:"last_check_at,omitempty"`
 }

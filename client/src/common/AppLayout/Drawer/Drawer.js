@@ -1,11 +1,15 @@
 import React from 'react';
 import { bool, func } from 'prop-types';
 import classNames from 'classnames';
-import { MAIN_PAGE } from '@config/routes';
+import { MAIN_PAGE, OBSERVATIONS_PAGE } from '@config/routes';
 
 import { makeStyles } from '@material-ui/core/styles';
 import { Drawer, List, Divider, IconButton } from '@material-ui/core';
-import { ChevronLeft, Dashboard } from '@material-ui/icons';
+import {
+  ChevronLeft,
+  Dashboard,
+  Notifications as NotificationsIcon
+} from '@material-ui/icons';
 import ListItem from './ListItem';
 
 export const DRAWER_WIDTH = 240;
@@ -40,7 +44,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const MyDrawer = ({ isOpen, onOpen }) => {
+const MyDrawer = ({ isOpen, onOpen, t }) => {
   const classes = useStyles();
   return (
     <Drawer
@@ -60,8 +64,14 @@ const MyDrawer = ({ isOpen, onOpen }) => {
       </div>
       <Divider />
       <List>
-        <ListItem to={MAIN_PAGE} text="Strona główna">
+        <ListItem to={MAIN_PAGE} text={t('appLayout.drawer.links.mainPage')}>
           <Dashboard />
+        </ListItem>
+        <ListItem
+          to={OBSERVATIONS_PAGE}
+          text={t('appLayout.drawer.links.observationsPage')}
+        >
+          <NotificationsIcon />
         </ListItem>
       </List>
     </Drawer>
@@ -75,7 +85,8 @@ MyDrawer.defaultProps = {
 
 MyDrawer.propTypes = {
   onOpen: func.isRequired,
-  isOpen: bool.isRequired
+  isOpen: bool.isRequired,
+  t: func.isRequired
 };
 
 export default MyDrawer;

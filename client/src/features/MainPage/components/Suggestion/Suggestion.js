@@ -1,5 +1,5 @@
 import React from 'react';
-import { object } from 'prop-types';
+import { object, func, bool } from 'prop-types';
 import { format } from 'date-fns';
 import classnames from 'classnames';
 import { DATE_FORMAT } from '@config/application';
@@ -39,7 +39,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-export default function Suggestion({ data, onSelect, selected }) {
+export default function Suggestion({ data, onSelect, selected, t }) {
   const classes = useStyles({ selected });
 
   return (
@@ -71,15 +71,17 @@ export default function Suggestion({ data, onSelect, selected }) {
         />
       )}
       <CardContent>
-        <Typography component="p">Cena: {data.price}</Typography>
+        <Typography component="p">
+          {t('price', { value: data.price })}
+        </Typography>
       </CardContent>
       <CardActions disableSpacing className={classes.actions}>
         <Button onClick={onSelect} color="secondary">
-          Usuń
+          {t('choose')}
         </Button>
         <Button>
           <Link color="secondary" underline="none" to={data.url}>
-            Przejdź do aukcji
+            {t('goToAuction')}
           </Link>
         </Button>
       </CardActions>
@@ -88,5 +90,8 @@ export default function Suggestion({ data, onSelect, selected }) {
 }
 
 Suggestion.propTypes = {
-  data: object.isRequired
+  data: object.isRequired,
+  t: func.isRequired,
+  onSelect: func.isRequired,
+  selected: bool.isRequired
 };
