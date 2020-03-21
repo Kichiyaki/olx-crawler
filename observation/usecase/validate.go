@@ -27,8 +27,10 @@ func (cfg config) validate(o models.Observation) error {
 
 	if cfg.Keywords {
 		for _, keyword := range o.Keywords {
-			if keyword.Type != "one_of" && keyword.Type != "excluded" {
+			if keyword.Type != "one_of" && keyword.Type != "excluded" && keyword.Type != "required" {
 				return errors.Wrap(errors.ErrInvalidKeywordType, []error{})
+			} else if keyword.Type == "one_of" && keyword.Group == "" {
+				return errors.Wrap(errors.ErrInvalidKeywordGroup, []error{})
 			} else if keyword.For != "title" && keyword.For != "description" {
 				return errors.Wrap(errors.ErrInvalidKeywordFor, []error{})
 			} else if keyword.Value == "" {

@@ -41,9 +41,13 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit, t }) {
       url: observation && observation.url ? observation.url : '',
       keywords: observation && observation.keywords ? observation.keywords : [],
       last_check_at: format(
-        observation ? new Date(observation.last_check_at) : new Date(),
-        'yyyy-MM-dd'
-      ),
+        observation && observation.last_check_at
+          ? new Date(observation.last_check_at)
+          : new Date(),
+        'yyyy-MM-dd HH:mm'
+      )
+        .split(' ')
+        .join('T'),
       deleted_keywords: [],
       started:
         observation && typeof observation.started === 'boolean'
@@ -80,7 +84,7 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit, t }) {
   });
 
   const addKeyword = () => {
-    const obj = { for: '', value: '', type: '' };
+    const obj = { for: '', value: '', type: '', group: '' };
     setFieldValue('keywords', [...values.keywords, obj]);
   };
 
@@ -131,7 +135,7 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit, t }) {
           fullWidth
         />
         <TextField
-          type="date"
+          type="datetime-local"
           name="last_check_at"
           label={t('observationFormDialog.inputLabel.last_check_at')}
           onChange={handleChange}
@@ -175,6 +179,9 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit, t }) {
                 <MenuItem value="">
                   {t('observationFormDialog.select')}
                 </MenuItem>
+                <MenuItem value="required">
+                  {t('observationFormDialog.required')}
+                </MenuItem>
                 <MenuItem value="one_of">
                   {t('observationFormDialog.one_of')}
                 </MenuItem>
@@ -213,6 +220,18 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit, t }) {
                 value={keyword.value}
                 fullWidth
               />
+              {keyword.type === 'one_of' ? (
+                <TextField
+                  name={`keywords[${index}].group`}
+                  label={t('observationFormDialog.inputLabel.keyword_group', {
+                    index: index + 1
+                  })}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  value={keyword.group}
+                  fullWidth
+                />
+              ) : null}
             </div>
           );
         })}

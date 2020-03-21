@@ -28,6 +28,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
+
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/sirupsen/logrus"
@@ -54,6 +56,18 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
+	configManager.OnConfigChange(func(in fsnotify.Event) {
+		cfg, err := configManager.Config()
+		if err != nil {
+			return
+		}
+		if cfg.Debug {
+			logrus.SetLevel(logrus.DebugLevel)
+		} else {
+			logrus.SetLevel(logrus.InfoLevel)
+		}
+	})
 
 	//Logger
 	if cfg.Debug {
