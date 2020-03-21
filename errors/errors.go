@@ -4,10 +4,10 @@ import (
 	"olx-crawler/models"
 )
 
-func Wrap(msg string, detailed []error) models.Error {
+func Wrap(msg string, details []error) models.Error {
 	return models.Error{
-		Message:  msg,
-		Detailed: convertToErrorStruct(detailed...),
+		Message: msg,
+		Details: convertToErrorStruct(details...),
 	}
 }
 
