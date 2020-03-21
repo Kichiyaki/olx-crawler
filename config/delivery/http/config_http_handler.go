@@ -34,7 +34,7 @@ func (h *handler) GetConfig(c echo.Context) error {
 	}
 	config, err := h.configManager.Config()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 	return c.JSON(http.StatusOK, models.Response{Data: config})
 }
@@ -47,15 +47,15 @@ func (h *handler) UpdateProxies(c echo.Context) error {
 	proxies := []string{}
 	if err := c.Bind(&proxies); err != nil {
 		formatted := errors.Wrap(errors.ErrInvalidPayload, []error{err})
-		return c.JSON(http.StatusBadRequest, models.Response{Error: formatError(formatted)})
+		return c.JSON(http.StatusBadRequest, models.Response{Errors: []error{formatError(formatted)}})
 	}
 	config, err := h.configManager.Config()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 	config.Proxies = proxies
 	if err := h.configManager.Save(config); err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 
 	return c.JSON(http.StatusOK, models.Response{Data: config})
@@ -69,11 +69,11 @@ func (h *handler) UpdateColly(c echo.Context) error {
 	payload := models.Config{}
 	if err := c.Bind(&payload.Colly); err != nil {
 		formatted := errors.Wrap(errors.ErrInvalidPayload, []error{err})
-		return c.JSON(http.StatusBadRequest, models.Response{Error: formatError(formatted)})
+		return c.JSON(http.StatusBadRequest, models.Response{Errors: []error{formatError(formatted)}})
 	}
 	config, err := h.configManager.Config()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 	if payload.Colly.Delay == 0 {
 		payload.Colly.Delay = config.Colly.Delay
@@ -83,7 +83,7 @@ func (h *handler) UpdateColly(c echo.Context) error {
 	}
 	config.Colly = payload.Colly
 	if err := h.configManager.Save(config); err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 
 	return c.JSON(http.StatusOK, models.Response{Data: config})
@@ -97,11 +97,11 @@ func (h *handler) UpdateDiscordNotifications(c echo.Context) error {
 	payload := make(map[string]interface{})
 	if err := c.Bind(&payload); err != nil {
 		formatted := errors.Wrap(errors.ErrInvalidPayload, []error{err})
-		return c.JSON(http.StatusBadRequest, models.Response{Error: formatError(formatted)})
+		return c.JSON(http.StatusBadRequest, models.Response{Errors: []error{formatError(formatted)}})
 	}
 	config, err := h.configManager.Config()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 	if channelID, ok := payload["channel_id"].(string); ok {
 		config.DiscordNotifications.ChannelID = channelID
@@ -113,7 +113,7 @@ func (h *handler) UpdateDiscordNotifications(c echo.Context) error {
 		config.DiscordNotifications.Enabled = enabled
 	}
 	if err := h.configManager.Save(config); err != nil {
-		return c.JSON(http.StatusInternalServerError, models.Response{Error: formatError(err)})
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
 
 	return c.JSON(http.StatusOK, models.Response{Data: config})

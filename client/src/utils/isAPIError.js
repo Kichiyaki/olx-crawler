@@ -3,8 +3,7 @@ export default err => {
     err &&
     err.response &&
     err.response.data &&
-    err.response.data.data &&
-    Array.isArray(err.response.data.data.errors) &&
-    err.response.data.data.errors[0]
+    Array.isArray(err.response.data.errors) &&
+    err.response.data.errors[0]
   );
 };

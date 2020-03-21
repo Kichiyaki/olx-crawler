@@ -37,13 +37,13 @@ func (h *handler) DeleteKeywords(c echo.Context) error {
 		id, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
 			e := errors.Wrap(errors.ErrCannotDeleteKeywords, []error{err})
-			return c.JSON(getStatusCode(e), models.Response{Error: formatError(e)})
+			return c.JSON(getStatusCode(e), models.Response{Errors: []error{formatError(e)}})
 		}
 		ids = append(ids, uint(id))
 	}
 	keywords, err := h.ucase.Delete(ids...)
 	if err != nil {
-		return c.JSON(getStatusCode(err), models.Response{Error: formatError(err)})
+		return c.JSON(getStatusCode(err), models.Response{Errors: []error{formatError(err)}})
 	}
 	return c.JSON(http.StatusOK, models.Response{Data: keywords})
 }
