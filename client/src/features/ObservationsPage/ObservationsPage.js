@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import useSnackbar, { SEVERITY } from '@libs/useSnackbar';
 import useList from '@libs/useList';
 import useRequest from '@libs/useRequest';
 import { OBSERVATIONS_PAGE } from '@config/namespaces';
-import { OBSERVATIONS } from '@config/api_routes';
+import { OBSERVATIONS, KEYWORDS } from '@config/api_routes';
 import { DEFAULT_LIMIT, DEFAULT_ORDER, HEAD_CELLS } from './constants';
 import isAPIError from '@utils/isAPIError';
 import { getRequestURL } from './utils';
@@ -16,10 +16,13 @@ import ErrorPage from '@features/ErrorPage/ErrorPage';
 import AppLayout from '@common/AppLayout/AppLayout';
 import Spinner from '@common/Spinner/Spinner';
 import Table from '@common/Table/Table';
+import EnhancedToolbar from './components/EnhancedToolbar/EnhancedToolbar';
 import ObservationFormDialog from './components/ObservationFormDialog/ObservationFormDialog';
 import ListItem from './components/ListItem/ListItem';
 
 function ObservationsPage() {
+  const [dialogID, setDialogID] = useState(0);
+  const [editedObservationID, setEditedObservationID] = useState(0);
   const { t } = useTranslation(OBSERVATIONS_PAGE);
   const {
     order,
@@ -94,12 +97,70 @@ function ObservationsPage() {
         return true;
       })
       .catch(err => {
-        if (isAPIError(error)) {
+        if (isAPIError(err)) {
           setSeverity(SEVERITY.ERROR);
-          setMessage(error.response.data.errors[0].message);
+          setMessage(err.response.data.errors[0].message);
         }
         return false;
       });
+  };
+
+  const handleEdit = async input => {
+    try {
+      await axios.patch(OBSERVATIONS.UPDATE + `/${editedObservationID}`, input);
+      if (input.deleted_keywords.length > 0) {
+        await axios.delete(
+          KEYWORDS.DELETE + '?id=' + input.deleted_keywords.join(',')
+        );
+      }
+      setSeverity(SEVERITY.SUCCESS);
+      setMessage(t('updated'));
+      refresh();
+      return true;
+    } catch (error) {
+      if (isAPIError(error)) {
+        setSeverity(SEVERITY.ERROR);
+        setMessage(error.response.data.errors[0].message);
+      }
+      return false;
+    }
+  };
+
+  const createEditObservationHandler = id => () => {
+    setEditedObservationID(id);
+    setDialogID(2);
+  };
+
+  const handleDialogClose = () => {
+    setDialogID(0);
+  };
+
+  const renderDialog = () => {
+    switch (dialogID) {
+      case 1:
+        return (
+          <ObservationFormDialog
+            onClose={handleDialogClose}
+            onSubmit={handleCreate}
+            open={true}
+            t={t}
+          />
+        );
+      case 2:
+        return (
+          <ObservationFormDialog
+            observation={observations.items.find(
+              item => item.id === editedObservationID
+            )}
+            onClose={handleDialogClose}
+            onSubmit={handleEdit}
+            open={true}
+            t={t}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   if (error || statusCode !== 200) {
@@ -127,6 +188,13 @@ function ObservationsPage() {
             onRequestNewPage={handleNewPage}
             rowsPerPage={limit}
             page={Math.floor(offset / limit)}
+            CustomToolbarCmp={props => (
+              <EnhancedToolbar
+                {...props}
+                onClickAddObservation={() => setDialogID(1)}
+                t={t}
+              />
+            )}
           >
             {observations.items.map(item => (
               <ListItem
@@ -134,6 +202,7 @@ function ObservationsPage() {
                 onSelect={createSelectHandler(item.id)}
                 item={item}
                 key={item.id}
+                onEdit={createEditObservationHandler(item.id)}
                 t={t}
               />
             ))}
@@ -167,7 +236,7 @@ function ObservationsPage() {
       <Snackbar {...snackbarProps}>
         <Alert {...alertProps}>{message}</Alert>
       </Snackbar>
-      <ObservationFormDialog onSubmit={handleCreate} open={true} />
+      {renderDialog()}
     </AppLayout>
   );
 }

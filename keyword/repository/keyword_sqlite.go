@@ -37,7 +37,7 @@ func NewKeywordRepository(db *gorm.DB) (keyword.Repository, error) {
 }
 
 func (repo *repository) Delete(f *models.KeywordFilter) error {
-	o := []models.Observation{}
+	o := []models.Keyword{}
 	errs := repo.appendFilter(f).Unscoped().Delete(&o).GetErrors()
 	if len(errs) > 0 {
 		if f != nil {

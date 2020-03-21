@@ -158,7 +158,9 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	e.HTTPErrorHandler = customHTTPErrorHandler
+	if os.Getenv("DEFAULT_HANDLER") != "true" {
+		e.HTTPErrorHandler = customHTTPErrorHandler
+	}
 	e.Use(middleware.Recover())
 	e.Use(_middleware.Logger())
 	e.Static("/", "./public")

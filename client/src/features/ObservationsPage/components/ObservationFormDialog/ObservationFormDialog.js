@@ -2,6 +2,7 @@ import React from 'react';
 import { useFormik } from 'formik';
 import { format, isAfter } from 'date-fns';
 
+import { makeStyles } from '@material-ui/core/styles';
 import {
   Button,
   TextField,
@@ -15,7 +16,16 @@ import {
   Checkbox
 } from '@material-ui/core';
 
-function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
+const useStyles = makeStyles(theme => ({
+  dialogContent: {
+    '& > *:not(:last-child)': {
+      marginBottom: theme.spacing(1)
+    }
+  }
+}));
+
+function ObservationFormDialog({ observation, onClose, open, onSubmit, t }) {
+  const classes = useStyles();
   const {
     handleBlur,
     handleChange,
@@ -27,16 +37,16 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
     setFieldValue
   } = useFormik({
     initialValues: {
-      name: observation ? observation.name : '',
-      url: observation ? observation.url : '',
-      keywords: observation ? observation.keywords : [],
+      name: observation && observation.name ? observation.name : '',
+      url: observation && observation.url ? observation.url : '',
+      keywords: observation && observation.keywords ? observation.keywords : [],
       last_check_at: format(
         observation ? new Date(observation.last_check_at) : new Date(),
         'yyyy-MM-dd'
       ),
-      deleted: [],
+      deleted_keywords: [],
       started:
-        observation && typeof observation.started == 'bool'
+        observation && typeof observation.started === 'boolean'
           ? observation.started
           : false
     },
@@ -57,13 +67,13 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
     validate: values => {
       const errors = {};
       if (!values.name) {
-        errors.name = 'Wymagane';
+        errors.name = t('observationFormDialog.error.required');
       }
       if (!values.url) {
-        errors.url = 'Wymagane';
+        errors.url = t('observationFormDialog.error.required');
       }
       if (isAfter(new Date(values.last_check_at), new Date())) {
-        errors.last_check_at = 'Niepoprawna data';
+        errors.last_check_at = t('observationFormDialog.error.invalidDate');
       }
       return errors;
     }
@@ -80,7 +90,10 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
         'keywords',
         values.keywords.filter(_keyword => _keyword.id !== keyword.id)
       );
-      setFieldValue('deleted', [...values.deleted, keyword.id]);
+      setFieldValue('deleted_keywords', [
+        ...values.deleted_keywords,
+        keyword.id
+      ]);
     } else {
       setFieldValue(
         'keywords',
@@ -91,11 +104,15 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
 
   return (
     <Dialog open={open} onClose={isSubmitting ? undefined : onClose}>
-      <DialogTitle>{observation ? 'Edytowanie' : 'Tworzenie'}</DialogTitle>
-      <DialogContent>
+      <DialogTitle>
+        {observation
+          ? t('observationFormDialog.title.edit')
+          : t('observationFormDialog.title.add')}
+      </DialogTitle>
+      <DialogContent className={classes.dialogContent}>
         <TextField
           name="name"
-          label="Nazwa"
+          label={t('observationFormDialog.inputLabel.name')}
           onChange={handleChange}
           onBlur={handleBlur}
           value={values.name}
@@ -105,7 +122,7 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
         />
         <TextField
           name="url"
-          label="URL"
+          label={t('observationFormDialog.inputLabel.url')}
           onChange={handleChange}
           onBlur={handleBlur}
           value={values.url}
@@ -116,7 +133,7 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
         <TextField
           type="date"
           name="last_check_at"
-          label="Od kiedy ma zacząć sprawdzać"
+          label={t('observationFormDialog.inputLabel.last_check_at')}
           onChange={handleChange}
           onBlur={handleBlur}
           value={values.last_check_at}
@@ -133,46 +150,64 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
               name="started"
             />
           }
-          label="Włączony"
+          label={t('observationFormDialog.inputLabel.started')}
         />
         {values.keywords.map((keyword, index) => {
           return (
             <div key={index}>
               <Typography component="p">
-                Słowo #{index + 1}{' '}
+                {t('observationFormDialog.keyword_title', { index: index + 1 })}{' '}
                 <Button onClick={() => deleteKeyword(keyword, index)}>
-                  Usuń
+                  {t('delete')}
                 </Button>
               </Typography>
               <TextField
                 select
                 name={`keywords[${index}].type`}
-                label={`${index + 1}. Typ`}
+                label={t('observationFormDialog.inputLabel.keyword_type', {
+                  index: index + 1
+                })}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 value={keyword.type}
                 fullWidth
               >
-                <MenuItem value="">Wybierz</MenuItem>
-                <MenuItem value="one_of">Jedno z</MenuItem>
-                <MenuItem value="excluded">Wykluczone</MenuItem>
+                <MenuItem value="">
+                  {t('observationFormDialog.select')}
+                </MenuItem>
+                <MenuItem value="one_of">
+                  {t('observationFormDialog.one_of')}
+                </MenuItem>
+                <MenuItem value="excluded">
+                  {t('observationFormDialog.excluded')}
+                </MenuItem>
               </TextField>
               <TextField
                 select
                 name={`keywords[${index}].for`}
-                label={`${index + 1}. Dla`}
+                label={t('observationFormDialog.inputLabel.keyword_for', {
+                  index: index + 1
+                })}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 value={keyword.for}
                 fullWidth
               >
-                <MenuItem value="">Wybierz</MenuItem>
-                <MenuItem value="title">Tytuł</MenuItem>
-                <MenuItem value="description">Opis</MenuItem>
+                <MenuItem value="">
+                  {t('observationFormDialog.select')}
+                </MenuItem>
+                <MenuItem value="title">
+                  {t('observationFormDialog.for_title')}
+                </MenuItem>
+                <MenuItem value="description">
+                  {t('observationFormDialog.description')}
+                </MenuItem>
               </TextField>
               <TextField
                 name={`keywords[${index}].value`}
-                label={`${index + 1}. Słowo`}
+                label={t('observationFormDialog.inputLabel.keyword_value', {
+                  index: index + 1
+                })}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 value={keyword.value}
@@ -182,12 +217,14 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
           );
         })}
         <Button type="button" fullWidth onClick={() => addKeyword()}>
-          Dodaj słowo kluczowe
+          {t('observationFormDialog.button.addKeyword')}
         </Button>
       </DialogContent>
       <DialogActions>
         <Button disabled={isSubmitting} onClick={handleSubmit} color="primary">
-          {observation ? 'Zapisz' : 'Dodaj'}
+          {observation
+            ? t('observationFormDialog.button.save')
+            : t('observationFormDialog.button.add')}
         </Button>
         <Button
           disabled={isSubmitting}
@@ -195,7 +232,7 @@ function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
           color="primary"
           autoFocus
         >
-          Anuluj
+          {t('cancel')}
         </Button>
       </DialogActions>
     </Dialog>

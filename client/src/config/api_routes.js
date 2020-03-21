@@ -9,7 +9,11 @@ export const SUGGESTIONS = {
 
 export const OBSERVATIONS = {
   STORE: '/api/observations',
-  UPDATE: '/api/observation',
+  UPDATE: '/api/observations',
   BROWSE: '/api/observations',
   DELETE: '/api/observations'
+};
+
+export const KEYWORDS = {
+  DELETE: '/api/keywords'
 };
