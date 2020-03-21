@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Link as MaterialUILink } from '@material-ui/core';
 
 const MyLink = ({ children, to, ...rest }) => {
-  console.log(to, to.includes('http'));
   if (to.includes('http')) {
     return (
       <MaterialUILink href={to} underline="none" color="inherit" {...rest}>

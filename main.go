@@ -4,11 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	_collySqliteStorage "olx-crawler/colly/sqlite3"
 	"olx-crawler/config"
 	_configHTTPDelivery "olx-crawler/config/delivery/http"
 	_cron "olx-crawler/cron"
 	"olx-crawler/i18n"
+	_keywordHTTPDelivery "olx-crawler/keyword/delivery/http"
+	_keywordRepository "olx-crawler/keyword/repository"
+	_keywordUsecase "olx-crawler/keyword/usecase"
+	"olx-crawler/menu"
 	_middleware "olx-crawler/middleware"
 	"olx-crawler/notifications"
 	_observationHTTPDelivery "olx-crawler/observation/delivery/http"
@@ -17,10 +22,9 @@ import (
 	_suggestionHTTPDelivery "olx-crawler/suggestion/delivery/http"
 	_suggestionRepository "olx-crawler/suggestion/repository"
 	_suggestionUsecase "olx-crawler/suggestion/usecase"
+	"olx-crawler/utils"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -46,9 +50,13 @@ func main() {
 	if err := configManager.Init(); err != nil {
 		logrus.Fatal(err)
 	}
+	cfg, err := configManager.Config()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
 	//Logger
-	if configManager.GetBool("debug") {
+	if cfg.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
@@ -61,6 +69,21 @@ func main() {
 		MaxAge:     1, //days
 	})
 
+	//I18N
+	i18n.LoadMessageFiles("./i18n/locales")
+
+	if cfg.Lang == "" {
+		var err error
+		cfg.Lang, err = systemLang.DetectLanguage()
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		if err := configManager.Save(cfg); err != nil {
+			logrus.Fatal(err)
+		}
+	}
+	i18n.SetLanguage(cfg.Lang)
+
 	//Notifications
 	notificationsManager, err := notifications.NewManager(configManager)
 	if err != nil {
@@ -71,19 +94,6 @@ func main() {
 			logrus.Fatal(err)
 		}
 	}()
-
-	//I18N
-	i18n.LoadMessageFiles("i18n/locales")
-
-	lang := configManager.GetString("lang")
-	if lang == "" {
-		var err error
-		lang, err = systemLang.DetectLanguage()
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}
-	i18n.SetLanguage(lang)
 
 	//DB
 	db, err := gorm.Open("sqlite3", "olx_crawler.db")
@@ -111,6 +121,10 @@ func main() {
 		}
 	}()
 	//REPOSITORIES
+	keywordRepo, err := _keywordRepository.NewKeywordRepository(db)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	observationRepo, err := _observationRepository.NewObservationRepository(db)
 	if err != nil {
 		logrus.Fatal(err)
@@ -120,46 +134,8 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	// s := true
-	// observationRepo.Store(&models.Observation{
-	// 	Name: "Dysk SSD",
-	// 	URL:  "https://www.olx.pl/elektronika/q-Dysk-SSD/?search%5Bfilter_float_price%3Afrom%5D=100&search%5Bfilter_float_price%3Ato%5D=500",
-	// 	OneOf: []models.OneOf{
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128 GB",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128 gb",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128GB",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "title",
-	// 			Value: "128gb",
-	// 		},
-	// 		models.OneOf{
-	// 			For:   "description",
-	// 			Value: "m2",
-	// 		},
-	// 	},
-	// 	Excluded: []models.Excluded{
-	// 		models.Excluded{
-	// 			For:   "title",
-	// 			Value: "komputer",
-	// 		},
-	// 		models.Excluded{
-	// 			For:   "title",
-	// 			Value: "laptop",
-	// 		},
-	// 	},
-	// 	Started: &s,
-	// })
-
 	//USECASES
+	keywordUcase := _keywordUsecase.NewKeywordUsecase(keywordRepo)
 	observationUcase := _observationUsecase.NewObservationUsecase(observationRepo)
 	suggestionUcase := _suggestionUsecase.NewSuggestionUsecase(suggestionRepo)
 
@@ -182,25 +158,35 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
+	if os.Getenv("DEFAULT_HANDLER") != "true" {
+		e.HTTPErrorHandler = customHTTPErrorHandler
+	}
 	e.Use(middleware.Recover())
 	e.Use(_middleware.Logger())
-	e.Static("/", "/public")
+	e.Static("/", "./public")
 	g := e.Group("/api")
+	_keywordHTTPDelivery.NewKeywordHandler(g, keywordUcase)
 	_observationHTTPDelivery.NewObservationHandler(g, observationUcase)
 	_suggestionHTTPDelivery.NewSuggestionHandler(g, suggestionUcase)
 	_configHTTPDelivery.NewConfigHandler(g, configManager)
 
-	url := fmt.Sprintf(":%d", configManager.GetInt("port"))
+	url := fmt.Sprintf(":%d", cfg.Port)
 	go func() {
-		e.Start(url)
+		if err := e.Start(url); err != http.ErrServerClosed {
+			logrus.Fatal(err)
+		}
 	}()
-	logrus.Infof("Server is listening on port %s", e.Server.Addr)
-	if err := openbrowser(fmt.Sprintf("http://localhost%s", url)); err != nil {
+	logrus.Infof("Server is listening on port %s", url)
+	serverURL := fmt.Sprintf("http://localhost%s", url)
+	if err := utils.OpenBrowser(serverURL); err != nil {
 		logrus.Fatal(err)
 	}
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
+	if os.Getenv("DISABLE_MENU") != "true" {
+		menu.New(serverURL, channel)
+	}
 	<-channel
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -209,18 +195,8 @@ func main() {
 	logrus.Info("shutting down")
 }
 
-func openbrowser(url string) error {
-	var err error
-
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("cmd", "/C", "start", url).Run()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	default:
-		err = fmt.Errorf("unsupported platform")
+func customHTTPErrorHandler(err error, c echo.Context) {
+	if _, ok := err.(*echo.HTTPError); ok {
+		c.File("./public/index.html")
 	}
-	return err
 }

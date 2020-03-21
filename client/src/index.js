@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { BrowserRouter } from 'react-router-dom';
+import ConfigProvider from '@libs/config/Provider';
 import { ThemeProvider } from '@material-ui/styles';
 import { createMuiTheme, responsiveFontSizes } from '@material-ui/core/styles';
 import App from './features/App';
@@ -10,7 +11,9 @@ const theme = responsiveFontSizes(createMuiTheme());
 const jsx = (
   <BrowserRouter>
     <ThemeProvider theme={theme}>
-      <App />
+      <ConfigProvider>
+        <App />
+      </ConfigProvider>
     </ThemeProvider>
   </BrowserRouter>
 );

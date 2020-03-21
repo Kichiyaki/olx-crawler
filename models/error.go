@@ -1,8 +1,8 @@
 package models
 
 type Error struct {
-	Message  string  `json:"message"`
-	Detailed []Error `json:"detailed,omitempty"`
+	Message string  `json:"message"`
+	Details []Error `json:"details,omitempty"`
 }
 
 func (err Error) Error() string {

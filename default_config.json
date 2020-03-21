@@ -1,0 +1,15 @@
+{
+  "version": "0.1",
+  "colly": {
+    "delay": 5,
+    "limit": 1
+  },
+  "discord_notifications": {
+    "channel_id": "",
+    "enabled": false,
+    "token": ""
+  },
+  "port": 8080,
+  "proxies": [],
+  "debug": false
+}

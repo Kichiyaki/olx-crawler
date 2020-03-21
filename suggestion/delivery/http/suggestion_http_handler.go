@@ -39,7 +39,7 @@ func (h *handler) FetchSuggestions(c echo.Context) error {
 	urlstruct.Unmarshal(ctx, c.Request().URL.Query(), filter)
 	pagination, err := h.ucase.Fetch(filter)
 	if err != nil {
-		return c.JSON(getStatusCode(err), models.Response{Error: formatError(err)})
+		return c.JSON(getStatusCode(err), models.Response{Errors: []error{formatError(err)}})
 	}
 	return c.JSON(http.StatusOK, models.Response{Data: pagination})
 }
@@ -52,11 +52,11 @@ func (h *handler) GetSuggestionByID(c echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		e := errors.Wrap(errors.ErrSuggestionNotFound, []error{err})
-		return c.JSON(getStatusCode(e), models.Response{Error: formatError(e)})
+		return c.JSON(getStatusCode(e), models.Response{Errors: []error{formatError(e)}})
 	}
 	suggestion, err := h.ucase.GetByID(uint(id))
 	if err != nil {
-		return c.JSON(getStatusCode(err), models.Response{Error: formatError(err)})
+		return c.JSON(getStatusCode(err), models.Response{Errors: []error{formatError(err)}})
 	}
 	return c.JSON(http.StatusOK, models.Response{Data: suggestion})
 }
@@ -71,13 +71,13 @@ func (h *handler) DeleteSuggestions(c echo.Context) error {
 		id, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
 			e := errors.Wrap(errors.ErrCannotDeleteSuggestions, []error{err})
-			return c.JSON(getStatusCode(e), models.Response{Error: formatError(e)})
+			return c.JSON(getStatusCode(e), models.Response{Errors: []error{formatError(e)}})
 		}
 		ids = append(ids, uint(id))
 	}
 	suggestions, err := h.ucase.Delete(ids...)
 	if err != nil {
-		return c.JSON(getStatusCode(err), models.Response{Error: formatError(err)})
+		return c.JSON(getStatusCode(err), models.Response{Errors: []error{formatError(err)}})
 	}
 	return c.JSON(http.StatusOK, models.Response{Data: suggestions})
 }

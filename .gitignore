@@ -4,3 +4,5 @@ build
 *.db-wal
 .vscode
 logs
+*.syso
+./config.json

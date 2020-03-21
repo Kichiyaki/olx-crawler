@@ -4,22 +4,19 @@ import { func, bool } from 'prop-types';
 import { NAME } from '@config/application';
 
 import { makeStyles } from '@material-ui/core/styles';
-import { AppBar, Toolbar, Typography, IconButton } from '@material-ui/core';
-import { Menu as MenuIcon } from '@material-ui/icons';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Tooltip
+} from '@material-ui/core';
+import { Menu as MenuIcon, Language as LanguageIcon } from '@material-ui/icons';
+import Link from '@common/Link/Link';
 import { DRAWER_WIDTH } from '../Drawer/Drawer';
 
 const useStyles = makeStyles(theme => {
   return {
-    title: {
-      cursor: 'pointer',
-      '&:not(:last-child)': {
-        marginRight: theme.spacing(2)
-      },
-      '& > a': {
-        textDecoration: 'none',
-        color: 'inherit'
-      }
-    },
     navItem: {
       marginRight: theme.spacing(2)
     },
@@ -48,19 +45,11 @@ const useStyles = makeStyles(theme => {
         easing: theme.transitions.easing.sharp,
         duration: theme.transitions.duration.enteringScreen
       })
-    },
-    loggedAs: {
-      [theme.breakpoints.up('xs')]: {
-        display: 'none'
-      },
-      [theme.breakpoints.up('sm')]: {
-        display: 'block'
-      }
     }
   };
 });
 
-const AppHeader = ({ isOpen, onDrawerOpen, noBoxShadow }) => {
+const AppHeader = ({ isOpen, onDrawerOpen, noBoxShadow, t }) => {
   const classes = useStyles({ noBoxShadow });
   return (
     <AppBar
@@ -80,15 +69,17 @@ const AppHeader = ({ isOpen, onDrawerOpen, noBoxShadow }) => {
         >
           <MenuIcon />
         </IconButton>
-        <Typography
-          variant="h4"
-          component="h3"
-          color="inherit"
-          noWrap
-          className={classes.title}
-        >
+        <Typography variant="h4" component="h3" color="inherit" noWrap>
           {NAME}
         </Typography>
+        <div style={{ flex: 1 }} />
+        <Tooltip title={t('appLayout.appHeader.website')}>
+          <IconButton color="inherit">
+            <Link to="https://dawid-wysokinski.pl">
+              <LanguageIcon />
+            </Link>
+          </IconButton>
+        </Tooltip>
       </Toolbar>
     </AppBar>
   );

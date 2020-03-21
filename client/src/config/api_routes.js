@@ -3,9 +3,17 @@ export const CONFIG = {
 };
 
 export const SUGGESTIONS = {
-  BROWSE: '/api/suggestions'
+  BROWSE: '/api/suggestions',
+  DELETE: '/api/suggestions'
 };
 
 export const OBSERVATIONS = {
-  BROWSE: '/api/observations'
+  STORE: '/api/observations',
+  UPDATE: '/api/observations',
+  BROWSE: '/api/observations',
+  DELETE: '/api/observations'
+};
+
+export const KEYWORDS = {
+  DELETE: '/api/keywords'
 };
