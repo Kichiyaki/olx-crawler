@@ -1,19 +1,22 @@
 package cron
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"olx-crawler/colly/debug"
 	"olx-crawler/config"
+	_i18n "olx-crawler/i18n"
 	"olx-crawler/models"
 	"olx-crawler/notifications"
 	"olx-crawler/observation"
 	"olx-crawler/suggestion"
+	"olx-crawler/utils"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 
 	"github.com/sirupsen/logrus"
 
@@ -95,14 +98,19 @@ func (h *handler) fetchSuggestions() {
 		if !ok {
 			return
 		}
-		description := strings.Trim(e.Text, "")
+		description := strings.TrimSpace(e.Text)
 		if isValid(currentObservation.Keywords, description, "description") {
 			if err := h.suggestionRepo.Store(suggestion); err != nil {
 				return
 			}
-			h.notificationsManager.Notify(fmt.Sprintf("%s: Hejho, powinieneś się tym zainteresować %s",
-				currentObservation.Name,
-				suggestion.URL))
+			h.notificationsManager.Notify(_i18n.NewLocalizer().MustLocalize(&i18n.LocalizeConfig{
+				TemplateData: map[string]interface{}{
+					"URL":  suggestion.URL,
+					"Name": currentObservation.Name,
+				},
+				DefaultMessage: utils.NewI18NMsg("notification.discord", "notification.discord"),
+				MessageID:      "notification.discord",
+			}))
 			h.logrus.WithField("suggestion_id", suggestion.ID).Debug("new suggestion")
 		}
 
@@ -272,21 +280,30 @@ func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion
 
 func isValid(keywords []models.Keyword, text, f string) bool {
 	countExcluded := 0
-	countOneOf := 0
-	countTotalOneOf := 0
+	countOneOf := make(map[string]int)
+	countTotalOneOf := make(map[string]int)
+	text = strings.ToLower(text)
 
 	for _, keyword := range keywords {
-		if keyword.Type == "excluded" && keyword.For == f && strings.Contains(text, keyword.Value) {
+		value := strings.ToLower(keyword.Value)
+		if keyword.Type == "required" && keyword.For == f && !strings.Contains(text, value) {
+			return false
+		} else if keyword.Type == "excluded" && keyword.For == f && strings.Contains(text, value) {
 			countExcluded++
 			break
 		} else if keyword.Type == "one_of" && keyword.For == f {
-			countTotalOneOf++
-			if strings.Contains(text, keyword.Value) {
-				countOneOf++
+			countTotalOneOf[keyword.Group]++
+			if strings.Contains(text, value) {
+				countOneOf[keyword.Group]++
 			}
 		}
 	}
-	return countExcluded == 0 && ((countTotalOneOf > 0 && countOneOf > 0) || countTotalOneOf == 0)
+	for group, total := range countTotalOneOf {
+		if total > 0 && countOneOf[group] == 0 {
+			return false
+		}
+	}
+	return countExcluded == 0
 }
 
 func isAfter(t time.Time, url, text string) bool {

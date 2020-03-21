@@ -6,4 +6,5 @@ const (
 	ErrInvalidKeywordType   = "keyword.errInvalidType"
 	ErrInvalidKeywordFor    = "keyword.errInvalidFor"
 	ErrInvalidKeywordValue  = "keyword.errInvalidValue"
+	ErrInvalidKeywordGroup  = "keyword.errInvalidGroup"
 )

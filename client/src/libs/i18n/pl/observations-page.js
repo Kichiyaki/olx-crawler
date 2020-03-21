@@ -40,9 +40,11 @@ export default {
       started: 'Włączona',
       keyword_type: '{{index}}. Typ',
       keyword_for: '{{index}}. Dla',
-      keyword_value: '{{index}}. Słowo'
+      keyword_value: '{{index}}. Słowo',
+      keyword_group: '{{index}}. Grupa'
     },
     keyword_title: 'Słowo #{{index}}',
+    required: 'Wymagane',
     one_of: 'Jedno z',
     excluded: 'Wykluczone',
     for_title: 'Tytuł',
