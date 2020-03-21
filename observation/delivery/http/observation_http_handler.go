@@ -23,21 +23,24 @@ type handler struct {
 }
 
 type ObservationInput struct {
-	Name        string            `json:"name"`
-	URL         string            `json:"url"`
-	OneOf       []models.OneOf    `json:"one_of"`
-	Excluded    []models.Excluded `json:"excluded"`
-	LastCheckAt time.Time         `json:"last_check_at"`
+	Name        string           `json:"name"`
+	URL         string           `json:"url"`
+	Keywords    []models.Keyword `json:"keywords"`
+	LastCheckAt time.Time        `json:"last_check_at"`
+	Started     *bool            `json:"started"`
 }
 
-func (o ObservationInput) ToModel() models.Observation {
-	return models.Observation{
-		Name:        o.Name,
-		URL:         o.URL,
-		OneOf:       o.OneOf,
-		Excluded:    o.Excluded,
-		LastCheckAt: o.LastCheckAt,
+func (input ObservationInput) ToModel() models.Observation {
+	o := models.Observation{
+		Name:        input.Name,
+		URL:         input.URL,
+		Keywords:    input.Keywords,
+		LastCheckAt: input.LastCheckAt,
 	}
+	if input.Started != nil {
+		o.Started = input.Started
+	}
+	return o
 }
 
 func NewObservationHandler(e *echo.Group, ucase observation.Usecase) {
@@ -150,12 +153,11 @@ func (h *handler) DeleteObservations(c echo.Context) error {
 func getStatusCode(err error) int {
 	e := errors.ToErrorModel(err)
 	switch e.Message {
-	case errors.ErrInvalidExcludedFor,
-		errors.ErrInvalidExcludedValue,
-		errors.ErrInvalidObservationName,
+	case errors.ErrInvalidObservationName,
 		errors.ErrInvalidObservationURL,
-		errors.ErrInvalidOneOfFor,
-		errors.ErrInvalidOneOfValue:
+		errors.ErrInvalidKeywordType,
+		errors.ErrInvalidKeywordFor,
+		errors.ErrInvalidKeywordValue:
 		return http.StatusBadRequest
 	case errors.ErrObservationNotFound:
 		return http.StatusNotFound

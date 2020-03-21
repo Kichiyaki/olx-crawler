@@ -31,6 +31,10 @@ func (ucase *usecase) GetByID(id uint) (*models.Observation, error) {
 }
 
 func (ucase *usecase) Store(o *models.Observation) error {
+	if o.Started == nil {
+		started := false
+		o.Started = &started
+	}
 	if err := newConfig().validate(*o); err != nil {
 		logrus.WithField("observation", string(utils.MustMarshal(o))).Debugf("Cannot store observation: %s", err.Error())
 		return err
@@ -47,11 +51,8 @@ func (ucase *usecase) Update(o *models.Observation) (*models.Observation, error)
 	if o.URL == "" {
 		cfg.URL = false
 	}
-	if len(o.Excluded) == 0 {
-		cfg.Excluded = false
-	}
-	if len(o.OneOf) == 0 {
-		cfg.OneOf = false
+	if len(o.Keywords) == 0 {
+		cfg.Keywords = false
 	}
 	if err := cfg.validate(*o); err != nil {
 		logrus.WithField("observation", string(utils.MustMarshal(o))).Debugf("Cannot update observation: %s", err.Error())

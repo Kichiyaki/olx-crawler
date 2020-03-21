@@ -9,13 +9,12 @@ import (
 type config struct {
 	Name     bool
 	URL      bool
-	Excluded bool
-	OneOf    bool
+	Keywords bool
 }
 
 func newConfig() config {
 	return config{
-		true, true, true, true,
+		true, true, true,
 	}
 }
 
@@ -26,22 +25,14 @@ func (cfg config) validate(o models.Observation) error {
 		return errors.Wrap(errors.ErrInvalidObservationURL, []error{})
 	}
 
-	if cfg.Excluded {
-		for _, excl := range o.Excluded {
-			if excl.For != "title" && excl.For != "description" {
-				return errors.Wrap(errors.ErrInvalidExcludedFor, []error{})
-			} else if excl.Value == "" {
-				return errors.Wrap(errors.ErrInvalidExcludedValue, []error{})
-			}
-		}
-	}
-
-	if cfg.OneOf {
-		for _, oneOf := range o.OneOf {
-			if oneOf.For != "title" && oneOf.For != "description" {
-				return errors.Wrap(errors.ErrInvalidOneOfFor, []error{})
-			} else if oneOf.Value == "" {
-				return errors.Wrap(errors.ErrInvalidOneOfValue, []error{})
+	if cfg.Keywords {
+		for _, keyword := range o.Keywords {
+			if keyword.Type != "one_of" && keyword.Type != "excluded" {
+				return errors.Wrap(errors.ErrInvalidKeywordType, []error{})
+			} else if keyword.For != "title" && keyword.For != "description" {
+				return errors.Wrap(errors.ErrInvalidKeywordFor, []error{})
+			} else if keyword.Value == "" {
+				return errors.Wrap(errors.ErrInvalidKeywordValue, []error{})
 			}
 		}
 	}

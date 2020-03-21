@@ -59,7 +59,7 @@ func (repo *repository) Update(input *models.Suggestion) error {
 }
 
 func (repo *repository) Delete(f *models.SuggestionFilter) error {
-	errs := repo.appendFilter(f).Delete(&[]models.Suggestion{}).GetErrors()
+	errs := repo.appendFilter(f).Unscoped().Delete(&[]models.Suggestion{}).GetErrors()
 	if len(errs) > 0 {
 		if f != nil {
 			repo.logrus.WithField("filter", string(utils.MustMarshal(f))).Debugf("Cannot fetch suggestions: %v", errs)

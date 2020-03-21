@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	_collySqliteStorage "olx-crawler/colly/sqlite3"
 	"olx-crawler/config"
 	_configHTTPDelivery "olx-crawler/config/delivery/http"
 	_cron "olx-crawler/cron"
 	"olx-crawler/i18n"
+	_keywordHTTPDelivery "olx-crawler/keyword/delivery/http"
+	_keywordRepository "olx-crawler/keyword/repository"
+	_keywordUsecase "olx-crawler/keyword/usecase"
 	"olx-crawler/menu"
 	_middleware "olx-crawler/middleware"
 	"olx-crawler/notifications"
@@ -117,6 +121,10 @@ func main() {
 		}
 	}()
 	//REPOSITORIES
+	keywordRepo, err := _keywordRepository.NewKeywordRepository(db)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 	observationRepo, err := _observationRepository.NewObservationRepository(db)
 	if err != nil {
 		logrus.Fatal(err)
@@ -127,6 +135,7 @@ func main() {
 	}
 
 	//USECASES
+	keywordUcase := _keywordUsecase.NewKeywordUsecase(keywordRepo)
 	observationUcase := _observationUsecase.NewObservationUsecase(observationRepo)
 	suggestionUcase := _suggestionUsecase.NewSuggestionUsecase(suggestionRepo)
 
@@ -149,17 +158,21 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
+	e.HTTPErrorHandler = customHTTPErrorHandler
 	e.Use(middleware.Recover())
 	e.Use(_middleware.Logger())
 	e.Static("/", "./public")
 	g := e.Group("/api")
+	_keywordHTTPDelivery.NewKeywordHandler(g, keywordUcase)
 	_observationHTTPDelivery.NewObservationHandler(g, observationUcase)
 	_suggestionHTTPDelivery.NewSuggestionHandler(g, suggestionUcase)
 	_configHTTPDelivery.NewConfigHandler(g, configManager)
 
 	url := fmt.Sprintf(":%d", cfg.Port)
 	go func() {
-		e.Start(url)
+		if err := e.Start(url); err != http.ErrServerClosed {
+			logrus.Fatal(err)
+		}
 	}()
 	logrus.Infof("Server is listening on port %s", url)
 	serverURL := fmt.Sprintf("http://localhost%s", url)
@@ -178,4 +191,10 @@ func main() {
 	defer cancel()
 	e.Shutdown(ctx)
 	logrus.Info("shutting down")
+}
+
+func customHTTPErrorHandler(err error, c echo.Context) {
+	if _, ok := err.(*echo.HTTPError); ok {
+		c.File("./public/index.html")
+	}
 }

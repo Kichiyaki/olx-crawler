@@ -96,7 +96,7 @@ func (h *handler) fetchSuggestions() {
 			return
 		}
 		description := strings.Trim(e.Text, "")
-		if isValid(currentObservation.OneOf, currentObservation.Excluded, description, "description") {
+		if isValid(currentObservation.Keywords, description, "description") {
 			if err := h.suggestionRepo.Store(suggestion); err != nil {
 				return
 			}
@@ -134,7 +134,7 @@ func (h *handler) fetchSuggestions() {
 		}
 		s.ObservationID = currentObservation.ID
 
-		if isValid(currentObservation.OneOf, currentObservation.Excluded, s.Title, "title") {
+		if isValid(currentObservation.Keywords, s.Title, "title") {
 			mutex.Lock()
 			suggestions[s.URL] = s
 			mutex.Unlock()
@@ -270,32 +270,23 @@ func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion
 	}
 }
 
-func isValid(o []models.OneOf, e []models.Excluded, text, f string) bool {
-	countTotal := 0
-	countMatchingOnes := 0
-	for _, oneOf := range o {
-		if oneOf.For == f {
-			countTotal++
-			if strings.Contains(text, oneOf.Value) {
-				countMatchingOnes++
+func isValid(keywords []models.Keyword, text, f string) bool {
+	countExcluded := 0
+	countOneOf := 0
+	countTotalOneOf := 0
+
+	for _, keyword := range keywords {
+		if keyword.Type == "excluded" && keyword.For == f && strings.Contains(text, keyword.Value) {
+			countExcluded++
+			break
+		} else if keyword.Type == "one_of" && keyword.For == f {
+			countTotalOneOf++
+			if strings.Contains(text, keyword.Value) {
+				countOneOf++
 			}
 		}
 	}
-
-	if countMatchingOnes == 0 && countTotal > 0 {
-		return false
-	}
-
-	countMatchingOnes = 0
-	for _, exclude := range e {
-		if exclude.For == f {
-			if strings.Contains(text, exclude.Value) {
-				countMatchingOnes++
-				break
-			}
-		}
-	}
-	return countMatchingOnes == 0
+	return countExcluded == 0 && ((countTotalOneOf > 0 && countOneOf > 0) || countTotalOneOf == 0)
 }
 
 func isAfter(t time.Time, url, text string) bool {

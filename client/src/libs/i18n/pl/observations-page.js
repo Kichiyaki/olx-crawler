@@ -18,5 +18,6 @@ export default {
   deleted_1: `Usunięto {{count}} obserwację.`,
   deleted_2: `Usunięto {{count}} obserwacji.`,
   delete: 'Usuń',
-  cancel: 'Anuluj'
+  cancel: 'Anuluj',
+  created: 'Pomyślnie utworzono obserwację.'
 };

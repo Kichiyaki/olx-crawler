@@ -1,6 +1,6 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import { useFormik } from 'formik';
-import { format } from 'date-fns';
+import { format, isAfter } from 'date-fns';
 
 import {
   Button,
@@ -10,10 +10,12 @@ import {
   DialogContent,
   DialogActions,
   MenuItem,
-  Typography
+  Typography,
+  FormControlLabel,
+  Checkbox
 } from '@material-ui/core';
 
-function ObservationForm({ observation, onClose, open }) {
+function ObservationFormDialog({ observation, onClose, open, onSubmit }) {
   const {
     handleBlur,
     handleChange,
@@ -27,21 +29,64 @@ function ObservationForm({ observation, onClose, open }) {
     initialValues: {
       name: observation ? observation.name : '',
       url: observation ? observation.url : '',
-      one_of: observation ? observation.one_of : [],
-      excluded: observation ? observation.excluded : [],
+      keywords: observation ? observation.keywords : [],
       last_check_at: format(
         observation ? new Date(observation.last_check_at) : new Date(),
         'yyyy-MM-dd'
-      )
+      ),
+      deleted: [],
+      started:
+        observation && typeof observation.started == 'bool'
+          ? observation.started
+          : false
     },
-    onSubmit: (_, { setSubmitting }) => {
-      setSubmitting(false);
+    onSubmit: async (values, { setSubmitting }) => {
+      const success = await onSubmit({
+        ...values,
+        keywords: values.keywords.filter(
+          keyword => keyword.for && keyword.value && keyword.type
+        ),
+        last_check_at: new Date(values.last_check_at)
+      });
+      if (success) {
+        onClose();
+      } else {
+        setSubmitting(false);
+      }
+    },
+    validate: values => {
+      const errors = {};
+      if (!values.name) {
+        errors.name = 'Wymagane';
+      }
+      if (!values.url) {
+        errors.url = 'Wymagane';
+      }
+      if (isAfter(new Date(values.last_check_at), new Date())) {
+        errors.last_check_at = 'Niepoprawna data';
+      }
+      return errors;
     }
   });
 
-  const addOneOfOrExcluded = f => {
-    const obj = { for: '', value: '' };
-    setFieldValue(f, [...values[f], obj]);
+  const addKeyword = () => {
+    const obj = { for: '', value: '', type: '' };
+    setFieldValue('keywords', [...values.keywords, obj]);
+  };
+
+  const deleteKeyword = (keyword, index) => {
+    if (keyword.id) {
+      setFieldValue(
+        'keywords',
+        values.keywords.filter(_keyword => _keyword.id !== keyword.id)
+      );
+      setFieldValue('deleted', [...values.deleted, keyword.id]);
+    } else {
+      setFieldValue(
+        'keywords',
+        values.keywords.filter((_, _index) => _index !== index)
+      );
+    }
   };
 
   return (
@@ -78,55 +123,47 @@ function ObservationForm({ observation, onClose, open }) {
           error={touched.last_check_at && !!errors.last_check_at}
           helperText={touched.last_check_at && errors.last_check_at}
           fullWidth
+          inputProps={{ max: format(new Date(), 'yyyy-MM-dd') }}
         />
-        {values.one_of.map((oneOf, index) => {
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={values.started}
+              onChange={handleChange}
+              name="started"
+            />
+          }
+          label="Włączony"
+        />
+        {values.keywords.map((keyword, index) => {
           return (
-            <Fragment key={index}>
-              <Typography>
-                Słowo #{index + 1} <Button>Usuń</Button>
+            <div key={index}>
+              <Typography component="p">
+                Słowo #{index + 1}{' '}
+                <Button onClick={() => deleteKeyword(keyword, index)}>
+                  Usuń
+                </Button>
               </Typography>
               <TextField
                 select
-                name={`one_of[${index}].for`}
-                label={`${index + 1}. Dla`}
+                name={`keywords[${index}].type`}
+                label={`${index + 1}. Typ`}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                value={oneOf.for}
+                value={keyword.type}
                 fullWidth
               >
                 <MenuItem value="">Wybierz</MenuItem>
-                <MenuItem value="title">Tytuł</MenuItem>
-                <MenuItem value="description">Opis</MenuItem>
+                <MenuItem value="one_of">Jedno z</MenuItem>
+                <MenuItem value="excluded">Wykluczone</MenuItem>
               </TextField>
-              <TextField
-                name={`one_of[${index}].value`}
-                label={`${index + 1}. Słowo`}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                value={oneOf.value}
-                fullWidth
-              />
-            </Fragment>
-          );
-        })}
-        <Button
-          type="button"
-          fullWidth
-          onClick={() => addOneOfOrExcluded('one_of')}
-        >
-          Dodaj mile widziane słowo
-        </Button>
-        {values.excluded.map((excluded, index) => {
-          return (
-            <Fragment key={index}>
-              <Typography>Słowo #{index + 1}</Typography>
               <TextField
                 select
-                name={`excluded[${index}].for`}
+                name={`keywords[${index}].for`}
                 label={`${index + 1}. Dla`}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                value={excluded.for}
+                value={keyword.for}
                 fullWidth
               >
                 <MenuItem value="">Wybierz</MenuItem>
@@ -134,27 +171,23 @@ function ObservationForm({ observation, onClose, open }) {
                 <MenuItem value="description">Opis</MenuItem>
               </TextField>
               <TextField
-                name={`excluded[${index}].value`}
+                name={`keywords[${index}].value`}
                 label={`${index + 1}. Słowo`}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                value={excluded.value}
+                value={keyword.value}
                 fullWidth
               />
-            </Fragment>
+            </div>
           );
         })}
-        <Button
-          type="button"
-          fullWidth
-          onClick={() => addOneOfOrExcluded('excluded')}
-        >
-          Wyklucz słowo
+        <Button type="button" fullWidth onClick={() => addKeyword()}>
+          Dodaj słowo kluczowe
         </Button>
       </DialogContent>
       <DialogActions>
         <Button disabled={isSubmitting} onClick={handleSubmit} color="primary">
-          Utwórz
+          {observation ? 'Zapisz' : 'Dodaj'}
         </Button>
         <Button
           disabled={isSubmitting}
@@ -169,4 +202,4 @@ function ObservationForm({ observation, onClose, open }) {
   );
 }
 
-export default ObservationForm;
+export default ObservationFormDialog;

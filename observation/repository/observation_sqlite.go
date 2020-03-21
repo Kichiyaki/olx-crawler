@@ -21,8 +21,7 @@ func NewObservationRepository(db *gorm.DB) (observation.Repository, error) {
 	var err error
 	for _, model := range []interface{}{
 		&models.Observation{},
-		&models.OneOf{},
-		&models.Excluded{},
+		&models.Keyword{},
 		&models.Checked{},
 	} {
 		if !db.HasTable(model) {

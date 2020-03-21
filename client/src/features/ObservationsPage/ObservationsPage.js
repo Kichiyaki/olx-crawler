@@ -16,7 +16,7 @@ import ErrorPage from '@features/ErrorPage/ErrorPage';
 import AppLayout from '@common/AppLayout/AppLayout';
 import Spinner from '@common/Spinner/Spinner';
 import Table from '@common/Table/Table';
-import ObservationForm from './components/ObservationForm/ObservationForm';
+import ObservationFormDialog from './components/ObservationFormDialog/ObservationFormDialog';
 import ListItem from './components/ListItem/ListItem';
 
 function ObservationsPage() {
@@ -84,6 +84,24 @@ function ObservationsPage() {
     }
   };
 
+  const handleCreate = input => {
+    return axios
+      .post(OBSERVATIONS.STORE, input)
+      .then(() => {
+        setSeverity(SEVERITY.SUCCESS);
+        setMessage(t('created'));
+        refresh();
+        return true;
+      })
+      .catch(err => {
+        if (isAPIError(error)) {
+          setSeverity(SEVERITY.ERROR);
+          setMessage(error.response.data.errors[0].message);
+        }
+        return false;
+      });
+  };
+
   if (error || statusCode !== 200) {
     return <ErrorPage statusCode={statusCode} error={error} />;
   }
@@ -149,7 +167,7 @@ function ObservationsPage() {
       <Snackbar {...snackbarProps}>
         <Alert {...alertProps}>{message}</Alert>
       </Snackbar>
-      <ObservationForm open={true} />
+      <ObservationFormDialog onSubmit={handleCreate} open={true} />
     </AppLayout>
   );
 }

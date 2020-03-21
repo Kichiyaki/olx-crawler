@@ -8,6 +8,8 @@ export const SUGGESTIONS = {
 };
 
 export const OBSERVATIONS = {
+  STORE: '/api/observations',
+  UPDATE: '/api/observation',
   BROWSE: '/api/observations',
   DELETE: '/api/observations'
 };
