@@ -1,7 +1,7 @@
 @echo off
 rm -rf build\windows
-windres -o rsrc.syso crawler.rc
-go build -ldflags "-H windowsgui" -o build\windows\crawler.exe
+windres -O coff -o crawler.syso crawler.rc
+go build -ldflags "-H windowsgui -X olx-crawler/config.Version=0.1.7" -o build\windows\crawler.exe
 copy %cd%\default_config.json %cd%\build\windows\config.json
 copy %cd%\icon.ico %cd%\build\windows\icon.ico
 copy %cd%\crawler.exe.manifest %cd%\build\windows\crawler.exe.manifest

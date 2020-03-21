@@ -1,7 +1,7 @@
 package models
 
 type Config struct {
-	Version string `json:"version" mapstructure:"version"`
+	Version string `json:"version" mapstructure:"-"`
 	Colly   struct {
 		Delay int `json:"delay"`
 		Limit int `json:"limit"`
