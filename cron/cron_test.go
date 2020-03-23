@@ -362,6 +362,167 @@ func TestFetchSuggestions(t *testing.T) {
 	})
 }
 
+func TestIsValid(t *testing.T) {
+	type test struct {
+		keywords      []models.Keyword
+		f             string
+		text          string
+		expectedValue bool
+	}
+	for _, test := range []test{
+		test{
+			keywords: []models.Keyword{
+				models.Keyword{
+					Type:  "required",
+					For:   "title",
+					Value: "Tytuł",
+				},
+			},
+			f:             "title",
+			text:          "Jakiś Tytuł",
+			expectedValue: true,
+		},
+		test{
+			keywords: []models.Keyword{
+				models.Keyword{
+					Type:  "required",
+					For:   "title",
+					Value: "Tytuł",
+				},
+			},
+			f:             "title",
+			text:          "Jakiś Tytul",
+			expectedValue: false,
+		},
+		test{
+			keywords: []models.Keyword{
+				models.Keyword{
+					Type:  "excluded",
+					For:   "title",
+					Value: "Tytuł",
+				},
+			},
+			f:             "title",
+			text:          "Jakiś Tytuł",
+			expectedValue: false,
+		},
+		test{
+			keywords: []models.Keyword{
+				models.Keyword{
+					Type:  "excluded",
+					For:   "title",
+					Value: "Tytuł",
+				},
+			},
+			f:             "title",
+			text:          "Jakiś Tytul",
+			expectedValue: true,
+		},
+		test{
+			keywords: []models.Keyword{
+				models.Keyword{
+					Type:  "one_of",
+					For:   "title",
+					Value: "Tytuł",
+					Group: "title",
+				},
+				models.Keyword{
+					Type:  "one_of",
+					For:   "title",
+					Value: "Tytul",
+					Group: "title",
+				},
+			},
+			f:             "title",
+			text:          "Jakiś Tytul",
+			expectedValue: true,
+		},
+	} {
+		valid := isValid(test.keywords, test.text, test.f)
+		if valid != test.expectedValue {
+			t.Errorf("%s: Expected %v, got %v", test.text, valid, test.expectedValue)
+		}
+	}
+}
+
+func TestIsAfter(t *testing.T) {
+	type test struct {
+		t             time.Time
+		url           string
+		olxDate       string
+		expectedValue bool
+	}
+	now := time.Now()
+
+	for index, test := range []test{
+		test{
+			t:             now.AddDate(0, 0, -1),
+			url:           "olx.pl",
+			olxDate:       now.Format("dzisiaj 15:04"),
+			expectedValue: true,
+		},
+		test{
+			t:             now.AddDate(0, 0, 1),
+			url:           "olx.pl",
+			olxDate:       now.Format("dzisiaj 15:04"),
+			expectedValue: false,
+		},
+		test{
+			t:             now.Add(-3 * time.Hour),
+			url:           "olx.pl",
+			olxDate:       now.Format("dzisiaj 15:04"),
+			expectedValue: true,
+		},
+		test{
+			t:             now.Add(3 * time.Hour),
+			url:           "olx.pl",
+			olxDate:       now.Format("dzisiaj 15:04"),
+			expectedValue: false,
+		},
+		test{
+			t:             now.AddDate(0, 0, -2),
+			url:           "olx.pl",
+			olxDate:       now.Format("wczoraj 15:04"),
+			expectedValue: true,
+		},
+		test{
+			t:             now,
+			url:           "olx.pl",
+			olxDate:       now.Format("wczoraj 15:04"),
+			expectedValue: false,
+		},
+		test{
+			t:             now.AddDate(0, 0, -1).Add(-3 * time.Hour),
+			url:           "olx.pl",
+			olxDate:       now.Format("wczoraj 15:04"),
+			expectedValue: true,
+		},
+		test{
+			t:             now.AddDate(0, 0, 1).Add(3 * time.Hour),
+			url:           "olx.pl",
+			olxDate:       now.Format("wczoraj 15:04"),
+			expectedValue: false,
+		},
+		test{
+			t:             now.AddDate(0, 0, 1),
+			url:           "olx.pl",
+			olxDate:       now.Format("2 Jan"),
+			expectedValue: false,
+		},
+		test{
+			t:             now.AddDate(0, 0, -1),
+			url:           "olx.pl",
+			olxDate:       now.Format("2 Jan"),
+			expectedValue: true,
+		},
+	} {
+		value := isAfter(test.t, test.url, test.olxDate)
+		if value != test.expectedValue {
+			t.Errorf("%d: Expected %v, got %v", index+1, value, test.expectedValue)
+		}
+	}
+}
+
 func newCollector() *colly.Collector {
 	return colly.NewCollector(
 		colly.Async(true),

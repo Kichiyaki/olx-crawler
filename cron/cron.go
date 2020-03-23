@@ -313,10 +313,15 @@ func isAfter(t time.Time, url, olxDate string) bool {
 
 	t = t.In(location)
 	now := time.Now().In(location)
+	if t.Year() > now.Year() ||
+		t.Month() > now.Month() ||
+		(t.Day() > now.Day() && t.Month() == now.Month()) {
+		return false
+	}
 	if strings.Contains(olxDate, yesterday) && utils.IsTodayDate(t) {
 		return false
 	}
-	if strings.Contains(olxDate, today) && (t.Year() > now.Year() ||
+	if strings.Contains(olxDate, yesterday) && (t.Year() > now.Year() ||
 		t.Month() > now.Month() ||
 		(t.Day() > now.Day() && t.Month() == now.Month())) {
 		return false
