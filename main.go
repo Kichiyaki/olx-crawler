@@ -156,7 +156,7 @@ func main() {
 	//CRON
 	c := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags)))))
-	err = _cron.AttachHandlers(c, &_cron.Config{
+	err = _cron.AttachFuncs(c, &_cron.Config{
 		NotificationsManager: notificationsManager,
 		ObservationRepo:      observationRepo,
 		SuggestionRepo:       suggestionRepo,

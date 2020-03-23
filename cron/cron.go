@@ -51,7 +51,7 @@ type Config struct {
 	CollyStorage         storage.Storage
 }
 
-func AttachHandlers(c *cron.Cron, cfg *Config) error {
+func AttachFuncs(c *cron.Cron, cfg *Config) error {
 	globalCfg, err := cfg.ConfigManager.Config()
 	if err != nil {
 		return err
@@ -89,12 +89,8 @@ func (h *handler) fetchSuggestions() {
 	suggestions := make(map[string]*models.Suggestion)
 	currentObservation := &models.Observation{}
 
-	collector.OnRequest(func(r *colly.Request) {
-		r.Ctx.Put("url", r.URL.String())
-	})
-
 	collector.OnHTML("#textContent", func(e *colly.HTMLElement) {
-		suggestion, ok := suggestions[e.Request.Ctx.Get("url")]
+		suggestion, ok := suggestions[e.Request.URL.String()]
 		if !ok {
 			return
 		}
@@ -144,7 +140,7 @@ func (h *handler) fetchSuggestions() {
 
 		date := strings.TrimSpace(e.DOM.Find(`i[data-icon="clock"]`).Parent().Text())
 		if isAfter(currentObservation.LastCheckAt,
-			e.Request.Ctx.Get("url"),
+			e.Request.URL.String(),
 			date) &&
 			isValid(currentObservation.Keywords,
 				s.Title,
@@ -174,7 +170,7 @@ func (h *handler) fetchSuggestions() {
 
 	collector.OnHTML(`.wrapper:nth-child(3)`, func(e *colly.HTMLElement) {
 		date := strings.TrimSpace(e.DOM.Find("#offers_table .wrap").Last().Find(`i[data-icon="clock"]`).Parent().Text())
-		if isAfter(currentObservation.LastCheckAt, e.Request.Ctx.Get("url"), date) {
+		if isAfter(currentObservation.LastCheckAt, e.Request.URL.String(), date) {
 			if href, exists := e.DOM.Find(`a[data-cy="page-link-next"]`).Attr("href"); exists {
 				e.Request.Visit(href)
 			}
@@ -311,36 +307,43 @@ func isValid(keywords []models.Keyword, text, f string) bool {
 }
 
 func isAfter(t time.Time, url, olxDate string) bool {
-	if strings.Contains(url, "olx.pl") {
-		plLocation, _ := time.LoadLocation("Europe/Warsaw")
-		t = t.In(plLocation)
-		if strings.Contains(olxDate, "wczoraj") && utils.IsTodayDate(t) {
+	location, _ := time.LoadLocation("Europe/Warsaw")
+	yesterday := "wczoraj"
+	today := "dzisiaj"
+
+	t = t.In(location)
+	now := time.Now().In(location)
+	if strings.Contains(olxDate, yesterday) && utils.IsTodayDate(t) {
+		return false
+	}
+	if strings.Contains(olxDate, today) && (t.Year() > now.Year() ||
+		t.Month() > now.Month() ||
+		(t.Day() > now.Day() && t.Month() == now.Month())) {
+		return false
+	}
+	if (strings.Contains(olxDate, today) && !utils.IsTodayDate(t)) ||
+		(strings.Contains(olxDate, yesterday) && !utils.IsYestardayDate(t)) {
+		return true
+	}
+	if strings.Contains(olxDate, today) || strings.Contains(olxDate, yesterday) {
+		layout := today + " 15:04"
+		if strings.Contains(olxDate, yesterday) {
+			layout = yesterday + " 15:04"
+		}
+		parsed, err := monday.ParseInLocation(layout, strings.ToLower(olxDate), location, monday.LocalePlPL)
+		if err != nil {
 			return false
 		}
-		if (strings.Contains(olxDate, "dzisiaj") && !utils.IsTodayDate(t)) ||
-			(strings.Contains(olxDate, "wczoraj") && !utils.IsYestardayDate(t)) {
+		if parsed.Hour() > t.Hour() || (parsed.Hour() == t.Hour() && parsed.Minute() >= t.Minute()) {
 			return true
 		}
-		if strings.Contains(olxDate, "dzisiaj") || strings.Contains(olxDate, "wczoraj") {
-			layout := "dzisiaj 15:04"
-			if strings.Contains(olxDate, "wczoraj") {
-				layout = "wczoraj 15:04"
-			}
-			parsed, err := monday.ParseInLocation(layout, strings.ToLower(olxDate), plLocation, monday.LocalePlPL)
-			if err != nil {
-				return false
-			}
-			if parsed.Hour() > t.Hour() || (parsed.Hour() == t.Hour() && parsed.Minute() >= t.Minute()) {
-				return true
-			}
-		} else {
-			parsed, err := monday.ParseInLocation("2 Jan", strings.ToLower(olxDate), plLocation, monday.LocalePlPL)
-			if err != nil {
-				return false
-			}
-			if (parsed.Month() == t.Month() && parsed.Day() >= t.Day()) || parsed.Month() > t.Month() {
-				return true
-			}
+	} else {
+		parsed, err := monday.ParseInLocation("2 Jan", strings.ToLower(olxDate), location, monday.LocalePlPL)
+		if err != nil {
+			return false
+		}
+		if (parsed.Month() == t.Month() && parsed.Day() >= t.Day()) || parsed.Month() > t.Month() {
+			return true
 		}
 	}
 
