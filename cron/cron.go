@@ -51,7 +51,7 @@ type Config struct {
 	CollyStorage         storage.Storage
 }
 
-func AttachHandlers(c *cron.Cron, cfg *Config) error {
+func AttachFuncs(c *cron.Cron, cfg *Config) error {
 	globalCfg, err := cfg.ConfigManager.Config()
 	if err != nil {
 		return err
@@ -89,12 +89,8 @@ func (h *handler) fetchSuggestions() {
 	suggestions := make(map[string]*models.Suggestion)
 	currentObservation := &models.Observation{}
 
-	collector.OnRequest(func(r *colly.Request) {
-		r.Ctx.Put("url", r.URL.String())
-	})
-
 	collector.OnHTML("#textContent", func(e *colly.HTMLElement) {
-		suggestion, ok := suggestions[e.Request.Ctx.Get("url")]
+		suggestion, ok := suggestions[e.Request.URL.String()]
 		if !ok {
 			return
 		}
@@ -142,7 +138,13 @@ func (h *handler) fetchSuggestions() {
 		}
 		s.ObservationID = currentObservation.ID
 
-		if isValid(currentObservation.Keywords, s.Title, "title") {
+		date := strings.TrimSpace(e.DOM.Find(`i[data-icon="clock"]`).Parent().Text())
+		if isAfter(currentObservation.LastCheckAt,
+			e.Request.URL.String(),
+			date) &&
+			isValid(currentObservation.Keywords,
+				s.Title,
+				"title") {
 			mutex.Lock()
 			suggestions[s.URL] = s
 			mutex.Unlock()
@@ -168,7 +170,7 @@ func (h *handler) fetchSuggestions() {
 
 	collector.OnHTML(`.wrapper:nth-child(3)`, func(e *colly.HTMLElement) {
 		date := strings.TrimSpace(e.DOM.Find("#offers_table .wrap").Last().Find(`i[data-icon="clock"]`).Parent().Text())
-		if isAfter(currentObservation.LastCheckAt, e.Request.Ctx.Get("url"), date) {
+		if isAfter(currentObservation.LastCheckAt, e.Request.URL.String(), date) {
 			if href, exists := e.DOM.Find(`a[data-cy="page-link-next"]`).Attr("href"); exists {
 				e.Request.Visit(href)
 			}
@@ -256,10 +258,8 @@ func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion
 	href = strings.TrimSpace(href)
 	splitted := strings.Split(href, "#")
 	href = splitted[0]
-	price := e.DOM.Find(".price strong").Text()
-	price = strings.TrimSpace(price)
-	title := e.DOM.Find("a strong").Text()
-	title = strings.TrimSpace(title)
+	price := strings.TrimSpace(e.DOM.Find(".price strong").Text())
+	title := strings.TrimSpace(e.DOM.Find("a strong").Text())
 	id, _ := e.DOM.Find("table").Attr("data-id")
 	id = strings.TrimSpace(id)
 	imgElement := e.DOM.Find("img")
@@ -306,47 +306,51 @@ func isValid(keywords []models.Keyword, text, f string) bool {
 	return countExcluded == 0
 }
 
-func isAfter(t time.Time, url, text string) bool {
-	if strings.Contains(url, "olx.pl") {
-		if strings.Contains(text, "wczoraj") && isTodayDate(t) {
+func isAfter(t time.Time, url, olxDate string) bool {
+	location, _ := time.LoadLocation("Europe/Warsaw")
+	yesterday := "wczoraj"
+	today := "dzisiaj"
+
+	t = t.In(location)
+	now := time.Now().In(location)
+	if t.Year() > now.Year() ||
+		t.Month() > now.Month() ||
+		(t.Day() > now.Day() && t.Month() == now.Month()) {
+		return false
+	}
+	if strings.Contains(olxDate, yesterday) && utils.IsTodayDate(t) {
+		return false
+	}
+	if strings.Contains(olxDate, yesterday) && (t.Year() > now.Year() ||
+		t.Month() > now.Month() ||
+		(t.Day() > now.Day() && t.Month() == now.Month())) {
+		return false
+	}
+	if (strings.Contains(olxDate, today) && !utils.IsTodayDate(t)) ||
+		(strings.Contains(olxDate, yesterday) && !utils.IsYestardayDate(t)) {
+		return true
+	}
+	if strings.Contains(olxDate, today) || strings.Contains(olxDate, yesterday) {
+		layout := today + " 15:04"
+		if strings.Contains(olxDate, yesterday) {
+			layout = yesterday + " 15:04"
+		}
+		parsed, err := monday.ParseInLocation(layout, strings.ToLower(olxDate), location, monday.LocalePlPL)
+		if err != nil {
 			return false
 		}
-		if (strings.Contains(text, "dzisiaj") && !isTodayDate(t)) ||
-			(strings.Contains(text, "wczoraj") && !isYestardayDate(t)) {
+		if parsed.Hour() > t.Hour() || (parsed.Hour() == t.Hour() && parsed.Minute() >= t.Minute()) {
 			return true
 		}
-		if strings.Contains(text, "dzisiaj") || strings.Contains(text, "wczoraj") {
-			layout := "dzisiaj 15:04"
-			if strings.Contains(text, "wczoraj") {
-				layout = "wczoraj 15:04"
-			}
-			parsed, err := monday.ParseInLocation(layout, strings.ToLower(text), time.UTC, monday.LocalePlPL)
-			if err != nil {
-				return false
-			}
-			if parsed.Hour() > t.Hour() || (parsed.Hour() == t.Hour() && parsed.Minute() >= t.Minute()) {
-				return true
-			}
-		} else {
-			parsed, err := monday.ParseInLocation("2 Jan", strings.ToLower(text), time.UTC, monday.LocalePlPL)
-			if err != nil {
-				return false
-			}
-			if (parsed.Month() == t.Month() && parsed.Day() >= t.Day()) || parsed.Month() > t.Month() {
-				return true
-			}
+	} else {
+		parsed, err := monday.ParseInLocation("2 Jan", strings.ToLower(olxDate), location, monday.LocalePlPL)
+		if err != nil {
+			return false
+		}
+		if (parsed.Month() == t.Month() && parsed.Day() >= t.Day()) || parsed.Month() > t.Month() {
+			return true
 		}
 	}
 
 	return false
-}
-
-func isTodayDate(t time.Time) bool {
-	now := time.Now()
-	return t.Month() == now.Month() && t.Day() == now.Day() && t.Year() == now.Year()
-}
-
-func isYestardayDate(t time.Time) bool {
-	yesterday := time.Now().AddDate(0, 0, -1)
-	return t.Month() == yesterday.Month() && t.Day() == yesterday.Day() && t.Year() == yesterday.Year()
 }

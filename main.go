@@ -156,7 +156,7 @@ func main() {
 	//CRON
 	c := cron.New(cron.WithChain(
 		cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.New(os.Stdout, "cron: ", log.LstdFlags)))))
-	err = _cron.AttachHandlers(c, &_cron.Config{
+	err = _cron.AttachFuncs(c, &_cron.Config{
 		NotificationsManager: notificationsManager,
 		ObservationRepo:      observationRepo,
 		SuggestionRepo:       suggestionRepo,
@@ -172,12 +172,14 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-	if os.Getenv("DEFAULT_HANDLER") != "true" {
+	if os.Getenv("MODE") != "development" {
 		e.HTTPErrorHandler = customHTTPErrorHandler
 	}
 	e.Use(middleware.Recover())
 	e.Use(_middleware.Logger())
-	e.Static("/", "./public")
+	if os.Getenv("MODE") != "development" {
+		e.Static("/", "./web")
+	}
 	g := e.Group("/api")
 	_keywordHTTPDelivery.NewKeywordHandler(g, keywordUcase)
 	_observationHTTPDelivery.NewObservationHandler(g, observationUcase)
@@ -192,13 +194,15 @@ func main() {
 	}()
 	logrus.Infof("Server is listening on port %s", url)
 	serverURL := fmt.Sprintf("http://localhost%s", url)
-	if err := utils.OpenBrowser(serverURL); err != nil {
-		logrus.Fatal(err)
+	if os.Getenv("MODE") != "development" {
+		if err := utils.OpenBrowser(serverURL); err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt, os.Kill, syscall.SIGTERM, syscall.SIGINT)
-	if os.Getenv("DISABLE_MENU") != "true" {
+	if os.Getenv("MODE") != "development" {
 		menu.New(serverURL, channel)
 	}
 	<-channel
@@ -211,6 +215,6 @@ func main() {
 
 func customHTTPErrorHandler(err error, c echo.Context) {
 	if _, ok := err.(*echo.HTTPError); ok {
-		c.File("./public/index.html")
+		c.File("./web/index.html")
 	}
 }

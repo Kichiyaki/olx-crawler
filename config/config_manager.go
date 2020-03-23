@@ -16,6 +16,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	Version = "1.0.0"
+)
+
 type Manager interface {
 	Init() error
 	Config() (*models.Config, error)
@@ -69,6 +73,7 @@ func (m *manager) Config() (*models.Config, error) {
 		m.logrus.Debugf("Cannot unmarshal config into struct: %s", err.Error())
 		return nil, errors.Wrap(errors.ErrCannotReadConfig, []error{err})
 	}
+	cfg.Version = Version
 	return cfg, nil
 }
 
