@@ -3,6 +3,7 @@ package usecase
 import (
 	"olx-crawler/errors"
 	"olx-crawler/models"
+	"olx-crawler/utils"
 	"strings"
 )
 
@@ -21,7 +22,10 @@ func newConfig() config {
 func (cfg config) validate(o models.Observation) error {
 	if cfg.Name && o.Name == "" {
 		return errors.Wrap(errors.ErrInvalidObservationName, []error{})
-	} else if cfg.URL && (o.URL == "" || !strings.Contains(o.URL, "olx.pl")) {
+	} else if domain, err := utils.ExtractDomainFromURL(o.URL); cfg.URL &&
+		(err != nil ||
+			len(domain) == 0 ||
+			!strings.Contains(domain[0], "olx.pl")) {
 		return errors.Wrap(errors.ErrInvalidObservationURL, []error{})
 	}
 
