@@ -142,7 +142,13 @@ func (h *handler) fetchSuggestions() {
 		}
 		s.ObservationID = currentObservation.ID
 
-		if isValid(currentObservation.Keywords, s.Title, "title") {
+		date := strings.TrimSpace(e.DOM.Find(`i[data-icon="clock"]`).Parent().Text())
+		if isAfter(currentObservation.LastCheckAt,
+			e.Request.Ctx.Get("url"),
+			date) &&
+			isValid(currentObservation.Keywords,
+				s.Title,
+				"title") {
 			mutex.Lock()
 			suggestions[s.URL] = s
 			mutex.Unlock()
@@ -256,10 +262,8 @@ func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion
 	href = strings.TrimSpace(href)
 	splitted := strings.Split(href, "#")
 	href = splitted[0]
-	price := e.DOM.Find(".price strong").Text()
-	price = strings.TrimSpace(price)
-	title := e.DOM.Find("a strong").Text()
-	title = strings.TrimSpace(title)
+	price := strings.TrimSpace(e.DOM.Find(".price strong").Text())
+	title := strings.TrimSpace(e.DOM.Find("a strong").Text())
 	id, _ := e.DOM.Find("table").Attr("data-id")
 	id = strings.TrimSpace(id)
 	imgElement := e.DOM.Find("img")
@@ -306,21 +310,23 @@ func isValid(keywords []models.Keyword, text, f string) bool {
 	return countExcluded == 0
 }
 
-func isAfter(t time.Time, url, text string) bool {
+func isAfter(t time.Time, url, olxDate string) bool {
 	if strings.Contains(url, "olx.pl") {
-		if strings.Contains(text, "wczoraj") && isTodayDate(t) {
+		plLocation, _ := time.LoadLocation("Europe/Warsaw")
+		t = t.In(plLocation)
+		if strings.Contains(olxDate, "wczoraj") && utils.IsTodayDate(t) {
 			return false
 		}
-		if (strings.Contains(text, "dzisiaj") && !isTodayDate(t)) ||
-			(strings.Contains(text, "wczoraj") && !isYestardayDate(t)) {
+		if (strings.Contains(olxDate, "dzisiaj") && !utils.IsTodayDate(t)) ||
+			(strings.Contains(olxDate, "wczoraj") && !utils.IsYestardayDate(t)) {
 			return true
 		}
-		if strings.Contains(text, "dzisiaj") || strings.Contains(text, "wczoraj") {
+		if strings.Contains(olxDate, "dzisiaj") || strings.Contains(olxDate, "wczoraj") {
 			layout := "dzisiaj 15:04"
-			if strings.Contains(text, "wczoraj") {
+			if strings.Contains(olxDate, "wczoraj") {
 				layout = "wczoraj 15:04"
 			}
-			parsed, err := monday.ParseInLocation(layout, strings.ToLower(text), time.UTC, monday.LocalePlPL)
+			parsed, err := monday.ParseInLocation(layout, strings.ToLower(olxDate), plLocation, monday.LocalePlPL)
 			if err != nil {
 				return false
 			}
@@ -328,7 +334,7 @@ func isAfter(t time.Time, url, text string) bool {
 				return true
 			}
 		} else {
-			parsed, err := monday.ParseInLocation("2 Jan", strings.ToLower(text), time.UTC, monday.LocalePlPL)
+			parsed, err := monday.ParseInLocation("2 Jan", strings.ToLower(olxDate), plLocation, monday.LocalePlPL)
 			if err != nil {
 				return false
 			}
@@ -339,14 +345,4 @@ func isAfter(t time.Time, url, text string) bool {
 	}
 
 	return false
-}
-
-func isTodayDate(t time.Time) bool {
-	now := time.Now()
-	return t.Month() == now.Month() && t.Day() == now.Day() && t.Year() == now.Year()
-}
-
-func isYestardayDate(t time.Time) bool {
-	yesterday := time.Now().AddDate(0, 0, -1)
-	return t.Month() == yesterday.Month() && t.Day() == yesterday.Day() && t.Year() == yesterday.Year()
 }
