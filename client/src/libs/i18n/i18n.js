@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import pl from './pl';
+import { DEFAULT_LANGUAGE } from '@config/application';
 
 i18n
   // pass the i18n instance to react-i18next.
@@ -8,8 +9,8 @@ i18n
   // init i18next
   // for all options read: https://www.i18next.com/overview/configuration-options
   .init({
-    fallbackLng: 'pl',
-    lng: 'pl',
+    fallbackLng: DEFAULT_LANGUAGE,
+    lng: DEFAULT_LANGUAGE,
     debug: true,
     load: 'languageOnly',
     resources: {

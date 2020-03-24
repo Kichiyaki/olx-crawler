@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gocolly/colly/v2/proxy"
+
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 
 	"github.com/sirupsen/logrus"
@@ -25,8 +27,6 @@ import (
 	"github.com/goodsign/monday"
 
 	"github.com/fsnotify/fsnotify"
-
-	"github.com/gocolly/colly/v2/proxy"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
@@ -95,7 +95,7 @@ func (h *handler) fetchSuggestions() {
 			return
 		}
 		description := strings.TrimSpace(e.Text)
-		if isValid(currentObservation.Keywords, description, "description") {
+		if isTextMatchToKeywords(currentObservation.Keywords, description, "description") {
 			if err := h.suggestionRepo.Store(suggestion); err != nil {
 				return
 			}
@@ -127,7 +127,7 @@ func (h *handler) fetchSuggestions() {
 	})
 
 	collector.OnHTML(".wrap", func(e *colly.HTMLElement) {
-		s := parseHTMLElementToSuggestionStruct(e)
+		s := parseHTMLToSuggestionStruct(e)
 		if _, ok := suggestions[s.URL]; ok {
 			return
 		}
@@ -142,7 +142,7 @@ func (h *handler) fetchSuggestions() {
 		if isAfter(currentObservation.LastCheckAt,
 			e.Request.URL.String(),
 			date) &&
-			isValid(currentObservation.Keywords,
+			isTextMatchToKeywords(currentObservation.Keywords,
 				s.Title,
 				"title") {
 			mutex.Lock()
@@ -207,29 +207,32 @@ func getCollector(s storage.Storage, cfg *models.Config) (*colly.Collector, erro
 	)
 	collector.DisableCookies()
 	extensions.RandomMobileUserAgent(collector)
-	proxiesLength := len(cfg.Proxies)
+	proxyLength := len(cfg.Proxy)
 	if cfg.Colly.Limit > 0 {
 		limit := cfg.Colly.Limit
-		if proxiesLength > 0 {
-			limit *= proxiesLength
+		if proxyLength > 0 {
+			limit *= proxyLength
 		}
 		numCPU := runtime.NumCPU()
 		if limit > numCPU*10 {
 			limit = numCPU * 10
 		}
-		collector.Limit(&colly.LimitRule{
+		rule := &colly.LimitRule{
 			DomainGlob:  "*",
 			Parallelism: limit,
-			RandomDelay: time.Duration(cfg.Colly.Delay) * time.Second,
-		})
+		}
+		if cfg.Colly.Delay > 0 {
+			rule.RandomDelay = time.Duration(cfg.Colly.Delay) * time.Second
+		}
+		collector.Limit(rule)
 	}
 	if s != nil {
 		if err := collector.SetStorage(s); err != nil {
 			return nil, err
 		}
 	}
-	if proxiesLength > 0 {
-		transport, err := getHTTPTransport(cfg.Proxies)
+	if proxyLength > 0 {
+		transport, err := getHTTPTransport(cfg.Proxy)
 		if err != nil {
 			return nil, err
 		}
@@ -238,8 +241,8 @@ func getCollector(s storage.Storage, cfg *models.Config) (*colly.Collector, erro
 	return collector, nil
 }
 
-func getHTTPTransport(proxies []string) (*http.Transport, error) {
-	rp, err := proxy.RoundRobinProxySwitcher(proxies...)
+func getHTTPTransport(proxyList []string) (*http.Transport, error) {
+	rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +256,7 @@ func getHTTPTransport(proxies []string) (*http.Transport, error) {
 	}, nil
 }
 
-func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion {
+func parseHTMLToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion {
 	href, _ := e.DOM.Find("a strong").Parent().Attr("href")
 	href = strings.TrimSpace(href)
 	splitted := strings.Split(href, "#")
@@ -278,7 +281,7 @@ func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion
 	}
 }
 
-func isValid(keywords []models.Keyword, text, f string) bool {
+func isTextMatchToKeywords(keywords []models.Keyword, text, f string) bool {
 	countExcluded := 0
 	countOneOf := make(map[string]int)
 	countTotalOneOf := make(map[string]int)

@@ -1,14 +1,15 @@
 import React from 'react';
 import { bool, func } from 'prop-types';
 import classNames from 'classnames';
-import { MAIN_PAGE, OBSERVATIONS_PAGE } from '@config/routes';
+import { MAIN_PAGE, OBSERVATIONS_PAGE, CONFIG_PAGE } from '@config/routes';
 
 import { makeStyles } from '@material-ui/core/styles';
 import { Drawer, List, Divider, IconButton } from '@material-ui/core';
 import {
   ChevronLeft,
   Dashboard,
-  Notifications as NotificationsIcon
+  Notifications as NotificationsIcon,
+  Settings as SettingsIcon
 } from '@material-ui/icons';
 import ListItem from './ListItem';
 
@@ -72,6 +73,12 @@ const MyDrawer = ({ isOpen, onOpen, t }) => {
           text={t('appLayout.drawer.links.observationsPage')}
         >
           <NotificationsIcon />
+        </ListItem>
+        <ListItem
+          to={CONFIG_PAGE}
+          text={t('appLayout.drawer.links.configPage')}
+        >
+          <SettingsIcon />
         </ListItem>
       </List>
     </Drawer>

@@ -1,5 +1,12 @@
 export const CONFIG = {
-  READ: '/api/config'
+  READ: '/api/config',
+  UPDATE: {
+    PROXY: '/api/config/proxy',
+    COLLY: '/api/config/colly',
+    DISCORD_NOTIFICATIONS: '/api/config/discord-notifications',
+    LANG: '/api/config/lang',
+    DEBUG: '/api/config/debug'
+  }
 };
 
 export const SUGGESTIONS = {

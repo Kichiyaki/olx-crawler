@@ -9,7 +9,13 @@ import isAPIError from '@utils/isAPIError';
 import { getSuggestionsReqParams } from './utils';
 
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { Grid, Typography, Snackbar, Button } from '@material-ui/core';
+import {
+  Grid,
+  Typography,
+  Snackbar,
+  Button,
+  Container
+} from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import ErrorPage from '@features/ErrorPage/ErrorPage';
 import AppLayout, { CONTAINER_ID } from '@common/AppLayout/AppLayout';
@@ -114,24 +120,26 @@ export default function MainPage() {
             style={{ overflow: 'visible' }}
             scrollableTarget={CONTAINER_ID}
           >
-            <Grid container spacing={2}>
-              {suggestions.items.length === 0 ? (
-                <Typography variant="h3" component="h2">
-                  {t('emptyArray')}
-                </Typography>
-              ) : (
-                suggestions.items.map(suggestion => (
-                  <Grid key={suggestion.id} xs={3} item>
-                    <Suggestion
-                      t={t}
-                      onSelect={createSelectHandler(suggestion.id)}
-                      selected={selected.some(id => id === suggestion.id)}
-                      data={suggestion}
-                    />
-                  </Grid>
-                ))
-              )}
-            </Grid>
+            <Container>
+              <Grid container spacing={2}>
+                {suggestions.items.length === 0 ? (
+                  <Typography variant="h3" component="h2">
+                    {t('emptyArray')}
+                  </Typography>
+                ) : (
+                  suggestions.items.map(suggestion => (
+                    <Grid key={suggestion.id} xs={12} sm={6} lg={4} item>
+                      <Suggestion
+                        t={t}
+                        onSelect={createSelectHandler(suggestion.id)}
+                        selected={selected.some(id => id === suggestion.id)}
+                        data={suggestion}
+                      />
+                    </Grid>
+                  ))
+                )}
+              </Grid>
+            </Container>
           </InfiniteScroll>
           <Snackbar
             anchorOrigin={{
