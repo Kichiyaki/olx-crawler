@@ -95,7 +95,7 @@ func (h *handler) fetchSuggestions() {
 			return
 		}
 		description := strings.TrimSpace(e.Text)
-		if isValid(currentObservation.Keywords, description, "description") {
+		if isTextMatchToKeywords(currentObservation.Keywords, description, "description") {
 			if err := h.suggestionRepo.Store(suggestion); err != nil {
 				return
 			}
@@ -127,7 +127,7 @@ func (h *handler) fetchSuggestions() {
 	})
 
 	collector.OnHTML(".wrap", func(e *colly.HTMLElement) {
-		s := parseHTMLElementToSuggestionStruct(e)
+		s := parseHTMLToSuggestionStruct(e)
 		if _, ok := suggestions[s.URL]; ok {
 			return
 		}
@@ -142,7 +142,7 @@ func (h *handler) fetchSuggestions() {
 		if isAfter(currentObservation.LastCheckAt,
 			e.Request.URL.String(),
 			date) &&
-			isValid(currentObservation.Keywords,
+			isTextMatchToKeywords(currentObservation.Keywords,
 				s.Title,
 				"title") {
 			mutex.Lock()
@@ -253,7 +253,7 @@ func getHTTPTransport(proxies []string) (*http.Transport, error) {
 	}, nil
 }
 
-func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion {
+func parseHTMLToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion {
 	href, _ := e.DOM.Find("a strong").Parent().Attr("href")
 	href = strings.TrimSpace(href)
 	splitted := strings.Split(href, "#")
@@ -278,7 +278,7 @@ func parseHTMLElementToSuggestionStruct(e *colly.HTMLElement) *models.Suggestion
 	}
 }
 
-func isValid(keywords []models.Keyword, text, f string) bool {
+func isTextMatchToKeywords(keywords []models.Keyword, text, f string) bool {
 	countExcluded := 0
 	countOneOf := make(map[string]int)
 	countTotalOneOf := make(map[string]int)

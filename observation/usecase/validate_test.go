@@ -22,7 +22,7 @@ func TestValidate(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid url", func(t *testing.T) {
+	t.Run("URL should contain one of the phrases: olx.pl", func(t *testing.T) {
 		err := cfg.validate(models.Observation{Name: "asdasda", URL: "sdoslx.pl"})
 		if err.Error() != errors.ErrInvalidObservationURL {
 			t.Errorf("Got %v, expected %v", err, errors.ErrInvalidObservationURL)

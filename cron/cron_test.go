@@ -17,7 +17,7 @@ import (
 )
 
 func TestFetchSuggestions(t *testing.T) {
-	t.Run("Should correctly navigate to next page", func(t *testing.T) {
+	t.Run("Should correctly navigate to the next page", func(t *testing.T) {
 		mux := http.NewServeMux()
 		ts := httptest.NewServer(mux)
 		defer ts.Close()
@@ -89,11 +89,11 @@ func TestFetchSuggestions(t *testing.T) {
 
 		h.fetchSuggestions()
 		if !called {
-			t.Error("didnt change page")
+			t.Error("didnt change the page")
 		}
 	})
 
-	t.Run("should not visit ad page", func(t *testing.T) {
+	t.Run("should not visit the ad page", func(t *testing.T) {
 		mux := http.NewServeMux()
 		ts := httptest.NewServer(mux)
 		defer ts.Close()
@@ -160,7 +160,7 @@ func TestFetchSuggestions(t *testing.T) {
 			}
 		})
 
-		t.Run("if title is invalid", func(t *testing.T) {
+		t.Run("If the title is not matching to keywords, it should go ahead.", func(t *testing.T) {
 			o.LastCheckAt = now.AddDate(0, 0, -1)
 			o.Keywords = append(o.Keywords, models.Keyword{
 				Value: "title",
@@ -176,7 +176,7 @@ func TestFetchSuggestions(t *testing.T) {
 		})
 	})
 
-	t.Run("should not store suggestion", func(t *testing.T) {
+	t.Run("should not store the suggestion", func(t *testing.T) {
 		mux := http.NewServeMux()
 		ts := httptest.NewServer(mux)
 		defer ts.Close()
@@ -257,7 +257,7 @@ func TestFetchSuggestions(t *testing.T) {
 			adPageVisited = true
 		})
 
-		t.Run("if description is invalid", func(t *testing.T) {
+		t.Run("If the description is not matching to keywords, it should go ahead.", func(t *testing.T) {
 			h.fetchSuggestions()
 			if !adPageVisited {
 				t.Error("didnt visit ad page")
@@ -268,7 +268,7 @@ func TestFetchSuggestions(t *testing.T) {
 		})
 	})
 
-	t.Run("should successfully store suggestion", func(t *testing.T) {
+	t.Run("should successfully store the suggestion", func(t *testing.T) {
 		mux := http.NewServeMux()
 		ts := httptest.NewServer(mux)
 		defer ts.Close()
@@ -351,18 +351,18 @@ func TestFetchSuggestions(t *testing.T) {
 
 		h.fetchSuggestions()
 		if !adPageVisited {
-			t.Error("didnt visit ad page")
+			t.Error("didnt visit the ad page")
 		}
 		if !storeCalled {
-			t.Error("didnt save suggestion")
+			t.Error("didnt save the suggestion")
 		}
 		if !notifyCalled {
-			t.Error("didnt call notificationsManager.Notify")
+			t.Error("didnt call Notify function")
 		}
 	})
 }
 
-func TestIsValid(t *testing.T) {
+func TestIsTextMatchToKeywords(t *testing.T) {
 	type test struct {
 		keywords      []models.Keyword
 		f             string
@@ -438,7 +438,7 @@ func TestIsValid(t *testing.T) {
 			expectedValue: true,
 		},
 	} {
-		valid := isValid(test.keywords, test.text, test.f)
+		valid := isTextMatchToKeywords(test.keywords, test.text, test.f)
 		if valid != test.expectedValue {
 			t.Errorf("%s: Expected %v, got %v", test.text, valid, test.expectedValue)
 		}
