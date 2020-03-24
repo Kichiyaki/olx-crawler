@@ -1,7 +1,8 @@
 import React from 'react';
 import { Switch, Route } from 'react-router-dom';
-import MainPage from './MainPage/MainPage';
+import ConfigPage from './ConfigPage/ConfigPage';
 import ErrorPage from './ErrorPage/ErrorPage';
+import MainPage from './MainPage/MainPage';
 import ObservationsPage from './ObservationsPage/ObservationsPage';
 
 function App() {
@@ -12,6 +13,9 @@ function App() {
       </Route>
       <Route path="/observations" exact>
         <ObservationsPage />
+      </Route>
+      <Route path="/config" exact>
+        <ConfigPage />
       </Route>
       <Route path="*">
         <ErrorPage />

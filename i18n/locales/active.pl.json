@@ -3,6 +3,7 @@
   "global.errInvalidPayload": "Niepoprawne dane do wykonania żądania.",
   "config.errCannotRead": "Nie udało się odczytać pliku konfiguracyjnego.",
   "config.errCannotSave": "Nie udało się zapisać pliku konfiguracyjnego.",
+  "config.errInvalidLanguage": "Nie prawidłowy język.",
   "keyword.errCannotFetch": "Nie udało się pobrać słów kluczowych.",
   "keyword.errCannotDelete": "Nie udało się usunąć słów kluczowych.",
   "keyword.errInvalidType": "Niepoprawny typ słowa kluczowego! Możliwe typy to: one_of, required i excluded.",

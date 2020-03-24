@@ -6,11 +6,15 @@ export default {
     drawer: {
       links: {
         mainPage: 'Strona główna',
-        observationsPage: 'Obserwacje'
+        observationsPage: 'Obserwacje',
+        configPage: 'Konfiguracja'
       }
     }
   },
   rowsPerPage: 'Wierszy na stronę',
   pagination: '{{from}}-{{to}} z {{count}}',
-  emptyTableBody: 'Brak danych'
+  emptyTableBody: 'Brak danych',
+  languages: {
+    pl: 'Polski'
+  }
 };

@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gocolly/colly/v2/proxy"
+
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 
 	"github.com/sirupsen/logrus"
@@ -25,8 +27,6 @@ import (
 	"github.com/goodsign/monday"
 
 	"github.com/fsnotify/fsnotify"
-
-	"github.com/gocolly/colly/v2/proxy"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
@@ -207,29 +207,32 @@ func getCollector(s storage.Storage, cfg *models.Config) (*colly.Collector, erro
 	)
 	collector.DisableCookies()
 	extensions.RandomMobileUserAgent(collector)
-	proxiesLength := len(cfg.Proxies)
+	proxyLength := len(cfg.Proxy)
 	if cfg.Colly.Limit > 0 {
 		limit := cfg.Colly.Limit
-		if proxiesLength > 0 {
-			limit *= proxiesLength
+		if proxyLength > 0 {
+			limit *= proxyLength
 		}
 		numCPU := runtime.NumCPU()
 		if limit > numCPU*10 {
 			limit = numCPU * 10
 		}
-		collector.Limit(&colly.LimitRule{
+		rule := &colly.LimitRule{
 			DomainGlob:  "*",
 			Parallelism: limit,
-			RandomDelay: time.Duration(cfg.Colly.Delay) * time.Second,
-		})
+		}
+		if cfg.Colly.Delay > 0 {
+			rule.RandomDelay = time.Duration(cfg.Colly.Delay) * time.Second
+		}
+		collector.Limit(rule)
 	}
 	if s != nil {
 		if err := collector.SetStorage(s); err != nil {
 			return nil, err
 		}
 	}
-	if proxiesLength > 0 {
-		transport, err := getHTTPTransport(cfg.Proxies)
+	if proxyLength > 0 {
+		transport, err := getHTTPTransport(cfg.Proxy)
 		if err != nil {
 			return nil, err
 		}
@@ -238,8 +241,8 @@ func getCollector(s storage.Storage, cfg *models.Config) (*colly.Collector, erro
 	return collector, nil
 }
 
-func getHTTPTransport(proxies []string) (*http.Transport, error) {
-	rp, err := proxy.RoundRobinProxySwitcher(proxies...)
+func getHTTPTransport(proxyList []string) (*http.Transport, error) {
+	rp, err := proxy.RoundRobinProxySwitcher(proxyList...)
 	if err != nil {
 		return nil, err
 	}

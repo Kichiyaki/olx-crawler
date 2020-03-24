@@ -22,9 +22,11 @@ func NewConfigHandler(e *echo.Group, configManager config.Manager) {
 		configManager,
 	}
 	e.GET("/config", handler.GetConfig)
-	e.PATCH("/config/proxies", handler.UpdateProxies)
+	e.PATCH("/config/proxy", handler.UpdateProxyList)
 	e.PATCH("/config/colly", handler.UpdateColly)
 	e.PATCH("/config/discord-notifications", handler.UpdateDiscordNotifications)
+	e.PATCH("/config/lang/:lang", handler.SetLanguage)
+	e.PATCH("/config/debug/:value", handler.SetDebugMode)
 }
 
 func (h *handler) GetConfig(c echo.Context) error {
@@ -39,13 +41,13 @@ func (h *handler) GetConfig(c echo.Context) error {
 	return c.JSON(http.StatusOK, models.Response{Data: config})
 }
 
-func (h *handler) UpdateProxies(c echo.Context) error {
+func (h *handler) UpdateProxyList(c echo.Context) error {
 	ctx := c.Request().Context()
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	proxies := []string{}
-	if err := c.Bind(&proxies); err != nil {
+	proxy := []string{}
+	if err := c.Bind(&proxy); err != nil {
 		formatted := errors.Wrap(errors.ErrInvalidPayload, []error{err})
 		return c.JSON(http.StatusBadRequest, models.Response{Errors: []error{formatError(formatted)}})
 	}
@@ -53,7 +55,7 @@ func (h *handler) UpdateProxies(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
-	config.Proxies = proxies
+	config.Proxy = proxy
 	if err := h.configManager.Save(config); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
 	}
@@ -111,6 +113,53 @@ func (h *handler) UpdateDiscordNotifications(c echo.Context) error {
 	}
 	if enabled, ok := payload["enabled"].(bool); ok {
 		config.DiscordNotifications.Enabled = enabled
+	}
+	if err := h.configManager.Save(config); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
+	}
+
+	return c.JSON(http.StatusOK, models.Response{Data: config})
+}
+
+func (h *handler) SetLanguage(c echo.Context) error {
+	ctx := c.Request().Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	lang := c.Param("lang")
+	if err := _i18n.SetLanguage(lang); err != nil {
+		return c.JSON(http.StatusBadRequest,
+			models.Response{Errors: []error{formatError(errors.Wrap(errors.ErrInvalidLanguage, []error{err}))}})
+	}
+	config, err := h.configManager.Config()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
+	}
+	config.Lang = lang
+	if err := h.configManager.Save(config); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
+	}
+
+	return c.JSON(http.StatusOK, models.Response{Data: config})
+}
+
+func (h *handler) SetDebugMode(c echo.Context) error {
+	ctx := c.Request().Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	debug := c.Param("value")
+	config, err := h.configManager.Config()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})
+	}
+	if debug == "true" {
+		config.Debug = true
+	} else if debug == "false" {
+		config.Debug = false
+	} else {
+		return c.JSON(http.StatusBadRequest,
+			models.Response{Errors: []error{formatError(errors.Wrap(errors.ErrInvalidPayload, []error{}))}})
 	}
 	if err := h.configManager.Save(config); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.Response{Errors: []error{formatError(err)}})

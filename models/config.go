@@ -11,8 +11,8 @@ type Config struct {
 		Enabled   bool   `json:"enabled"`
 		Token     string `json:"token"`
 	} `mapstructure:"discord_notifications" json:"discord_notifications"`
-	Port    uint     `json:"port"`
-	Lang    string   `json:"lang" mapstructure:"lang"`
-	Proxies []string `json:"proxies,omitempty" mapstructure:"proxies"`
-	Debug   bool     `json:"debug" mapstructure:"debug"`
+	Port  uint     `json:"port"`
+	Lang  string   `json:"lang" mapstructure:"lang"`
+	Proxy []string `json:"proxy,omitempty" mapstructure:"proxy"`
+	Debug bool     `json:"debug" mapstructure:"debug"`
 }
