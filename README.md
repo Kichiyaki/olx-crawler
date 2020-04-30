@@ -29,9 +29,9 @@ You need to install this to run this app:
 6. Type "yarn run start" in your command prompt.
 7. Navigate to localhost:3000. If there is any content, then everything works.
 
-## How to build the app to a standalone .exe file
+## How to build the standalone .exe file
 
-I prepared batch files to make this easy as I can.
+I prepared batch file to make this easy as I can.
 
 1. Navigate to client directory.
 2. Type "yarn run build" in your command prompt and wait until the build finished.
